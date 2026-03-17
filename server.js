@@ -54,44 +54,45 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
-// --- 3. BULLETPROOF IMAGE ENDPOINT (Base64 + Fallback) ---
+// --- 3. IMAGE SEARCH (UNSPLASH PRODUCTION READY) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
-    if (!word) return res.status(400).json({ error: "Word is required" });
+    if (!word) return res.status(400).json({ error: "Word required" });
 
-    const cacheKey = word.toLowerCase().trim();
-
-    if (imageCache.has(cacheKey)) {
-        console.log(`⚡ Cache hit for: ${cacheKey}`);
-        return res.json({ imageUrl: imageCache.get(cacheKey) });
-    }
+    if (imageCache.has(word)) return res.json(imageCache.get(word));
 
     try {
-        const promptText = `A simple clean vector illustration of ${word}, educational flashcard style, white background`;
-        const encodedPrompt = encodeURIComponent(promptText);
-        
-        // 1. Backend securely fetches the image
-        const response = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true`);
+        const response = await fetch(
+            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(word)}&per_page=1`,
+            { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
+        );
 
-        if (!response.ok) throw new Error("Pollinations API failed to respond");
+        const data = await response.json();
 
-        // 2. Convert image to raw Base64 text (Bypasses frontend adblockers!)
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+        if (data.results && data.results.length > 0) {
+            const photo = data.results[0];
+            
+            const imageData = {
+                imageUrl: photo.urls.small,
+                photographer: photo.user.name,
+                photographerLink: photo.user.links.html,
+                downloadLocation: photo.links.download_location // Required for trigger
+            };
 
-        // 3. Save and send
-        imageCache.set(cacheKey, base64Image);
-        res.json({ imageUrl: base64Image });
-
-    } catch (error) {
-        console.error("Image Generation Error:", error.message);
-        
-        // 4. THE FALLBACK: Never throw a 500 error. Send a Material 3 placeholder instead!
-        const fallbackUrl = `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(word)}`;
-        res.json({ imageUrl: fallbackUrl });
+            imageCache.set(word, imageData);
+            return res.json(imageData);
+        } else {
+            throw new Error("No photo found");
+        }
+    } catch (err) {
+        // Fallback still works but has no attribution
+        const fallback = {
+            imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(word)}`,
+            photographer: null,
+            photographerLink: null,
+            downloadLocation: null
+        };
+        res.json(fallback);
     }
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+        
