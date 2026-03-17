@@ -16,7 +16,7 @@ app.get('/api/wakeup', (req, res) => {
     res.json({ status: "Awake and ready!" });
 });
 
-// --- 2. TRANSLATION ENDPOINT ---
+// --- 2. TRANSLATION ENDPOINT (GEMINI API) ---
 app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word is required" });
@@ -70,12 +70,12 @@ app.get('/api/image', async (req, res) => {
     }
 
     try {
-        // Search Lexica's database for pre-generated AI images of this word
+        // Search Lexica's database for pre-generated AI images
         const query = encodeURIComponent(`${word} simple vector illustration white background`);
         const url = `https://lexica.art/api/v1/search?q=${query}`;
 
         const response = await fetch(url, {
-            headers: { "User-Agent": "Mozilla/5.0" } // Prevents the API from blocking our server
+            headers: { "User-Agent": "Mozilla/5.0" }
         });
 
         if (!response.ok) throw new Error("Lexica API Failed");
@@ -84,14 +84,14 @@ app.get('/api/image', async (req, res) => {
 
         // Check if we got images back
         if (data.images && data.images.length > 0) {
-            // Grab the first image result (srcSmall loads much faster on the frontend)
+            // Grab the first image result
             const imageUrl = data.images[0].srcSmall; 
             
             // Save to cache
             imageCache.set(cacheKey, imageUrl);
             res.json({ imageUrl: imageUrl });
         } else {
-            throw new Error("No images found for this word");
+            throw new Error("No images found");
         }
 
     } catch (error) {
@@ -99,3 +99,7 @@ app.get('/api/image', async (req, res) => {
         res.status(500).json({ error: "Failed to fetch image" });
     }
 });
+
+// --- THIS IS THE CRITICAL LINE THAT KEEPS THE SERVER ALIVE ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
