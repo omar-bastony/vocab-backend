@@ -56,6 +56,7 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
+
 // --- 3. IMAGE GENERATION ENDPOINT ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
@@ -63,36 +64,26 @@ app.get('/api/image', async (req, res) => {
 
     const cacheKey = word.toLowerCase().trim();
 
+    // Cache Hit: Return the saved URL
     if (imageCache.has(cacheKey)) {
         console.log(`⚡ Cache hit for: ${cacheKey}`);
         return res.json({ imageUrl: imageCache.get(cacheKey) });
     }
 
+    // Cache Miss: Generate new Pollinations URL
     try {
-        const response = await fetch(
-            "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
-            {
-                headers: { Authorization: `Bearer ${process.env.HF_API_TOKEN}` },
-                method: "POST",
-                body: JSON.stringify({ 
-                    inputs: `A simple, clean vector illustration of ${word}, educational flashcard style, white background` 
-                }),
-            }
-        );
+        const promptText = `A simple clean vector illustration of ${word}, educational flashcard style, white background`;
+        const encodedPrompt = encodeURIComponent(promptText);
+        const randomSeed = Math.floor(Math.random() * 100000);
+        
+        // Pollinations generates the image directly via this URL
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${randomSeed}`;
 
-        if (!response.ok) throw new Error("Image API Failed");
-
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
-
-        imageCache.set(cacheKey, base64Image);
-        res.json({ imageUrl: base64Image });
+        // Save to cache
+        imageCache.set(cacheKey, imageUrl);
+        res.json({ imageUrl: imageUrl });
     } catch (error) {
         console.error("Image Generation Error:", error);
         res.status(500).json({ error: "Failed to generate image" });
     }
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
