@@ -88,4 +88,4 @@ app.get('/api/image', async (req, res) => {
 
 // Use Render's default port or 3000
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`)); 
