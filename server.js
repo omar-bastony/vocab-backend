@@ -87,6 +87,6 @@ app.get('/api/image', async (req, res) => {
     }
 });
 
-// --- THIS IS THE CRITICAL LINE THAT KEEPS THE SERVER ALIVE ---
+// --- THIS IS THE CRITICAL LINE THAT KEEPS THE SERVER ALIVE --- 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
