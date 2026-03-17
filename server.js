@@ -11,7 +11,7 @@ app.use(express.json());
 // In-memory cache for images
 const imageCache = new Map(); 
 
-// --- 1. WAKE UP ENDPOINT (For the frontend spinner) ---
+// --- 1. WAKE UP ENDPOINT ---
 app.get('/api/wakeup', (req, res) => {
     res.json({ status: "Awake and ready!" });
 });
@@ -56,8 +56,7 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
-
-// --- 3. IMAGE GENERATION ENDPOINT ---
+// --- 3. IMAGE GENERATION ENDPOINT (POLLINATIONS AI) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word is required" });
@@ -87,3 +86,7 @@ app.get('/api/image', async (req, res) => {
         res.status(500).json({ error: "Failed to generate image" });
     }
 });
+
+// --- THIS IS THE CRITICAL LINE THAT KEEPS THE SERVER ALIVE ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
