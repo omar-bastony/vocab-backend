@@ -8,10 +8,10 @@ app.use(express.json());
 
 const imageCache = new Map();
 
-app.get('/', (req, res) => res.status(200).send("Server is Live!"));
+app.get('/', (req, res) => res.status(200).send("Stable Server is Live!"));
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
-// --- 2. TRANSLATION ENDPOINT ---
+// --- 2. STABLE TRANSLATION (GEMINI 1.5 FLASH) ---
 app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
@@ -29,48 +29,38 @@ app.post('/api/translate', async (req, res) => {
             })
         });
         const data = await response.json();
-        
-        // Safety check for Gemini response structure
-        if (!data.candidates || !data.candidates[0].content.parts[0].text) {
-            throw new Error("Invalid API Response");
-        }
-
-        res.json(JSON.parse(data.candidates[0].content.parts[0].text));
+        const resultText = data.candidates[0].content.parts[0].text;
+        res.json(JSON.parse(resultText));
     } catch (err) {
-        console.error("Translation Error:", err);
-        res.status(500).json({ error: "Translation failed. Check API Key." });
+        console.error("Gemini Error:", err);
+        res.status(500).json({ error: "Translation failed" });
     }
 });
 
-// --- 3. IMAGE ENDPOINT (STABLE VERSION) ---
+// --- 3. STABLE IMAGE SEARCH (LEXICA SEARCH) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
+    // Fallback placeholder that always works
     const fallback = `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(word)}`;
 
     if (imageCache.has(word)) return res.json({ imageUrl: imageCache.get(word) });
 
     try {
-        // We use a high-reliability model for image generation
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: `Generate a simple educational icon illustration of ${word} on white background.` }] }]
-            })
-        });
-        
+        const query = encodeURIComponent(`${word} simple vector illustration white background`);
+        const response = await fetch(`https://lexica.art/api/v1/search?q=${query}`);
         const data = await response.json();
-        // Extract base64 if available, otherwise return fallback
-        const base64 = data.candidates?.[0]?.content?.parts?.find(p => p.inline_data)?.inline_data?.data;
-        
-        const imageUrl = base64 ? `data:image/png;base64,${base64}` : fallback;
-        imageCache.set(word, imageUrl);
-        res.json({ imageUrl });
+
+        if (data.images && data.images.length > 0) {
+            const imageUrl = data.images[0].srcSmall;
+            imageCache.set(word, imageUrl);
+            return res.json({ imageUrl });
+        }
+        res.json({ imageUrl: fallback });
     } catch (err) {
-        res.json({ imageUrl: fallback }); // Never 500 error here
+        // If Lexica is blocked, we return the fallback so the app doesn't break
+        res.json({ imageUrl: fallback });
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Stable Server on port ${PORT}`));
