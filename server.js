@@ -4,11 +4,9 @@ import 'dotenv/config';
 
 const app = express();
 
-// Allow requests from your frontend
 app.use(cors());
 app.use(express.json());
 
-// In-memory cache for images
 const imageCache = new Map(); 
 
 // --- 1. WAKE UP ENDPOINT ---
@@ -16,7 +14,7 @@ app.get('/api/wakeup', (req, res) => {
     res.json({ status: "Awake and ready!" });
 });
 
-// --- 2. TRANSLATION ENDPOINT (GEMINI API) ---
+// --- 2. TRANSLATION ENDPOINT ---
 app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word is required" });
@@ -56,50 +54,44 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
-// --- 3. IMAGE SEARCH ENDPOINT (LEXICA.ART) ---
+// --- 3. BULLETPROOF IMAGE ENDPOINT (Base64 + Fallback) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word is required" });
 
     const cacheKey = word.toLowerCase().trim();
 
-    // Cache Hit
     if (imageCache.has(cacheKey)) {
         console.log(`⚡ Cache hit for: ${cacheKey}`);
         return res.json({ imageUrl: imageCache.get(cacheKey) });
     }
 
     try {
-        // Search Lexica's database for pre-generated AI images
-        const query = encodeURIComponent(`${word} simple vector illustration white background`);
-        const url = `https://lexica.art/api/v1/search?q=${query}`;
+        const promptText = `A simple clean vector illustration of ${word}, educational flashcard style, white background`;
+        const encodedPrompt = encodeURIComponent(promptText);
+        
+        // 1. Backend securely fetches the image
+        const response = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true`);
 
-        const response = await fetch(url, {
-            headers: { "User-Agent": "Mozilla/5.0" }
-        });
+        if (!response.ok) throw new Error("Pollinations API failed to respond");
 
-        if (!response.ok) throw new Error("Lexica API Failed");
+        // 2. Convert image to raw Base64 text (Bypasses frontend adblockers!)
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
 
-        const data = await response.json();
-
-        // Check if we got images back
-        if (data.images && data.images.length > 0) {
-            // Grab the first image result
-            const imageUrl = data.images[0].srcSmall; 
-            
-            // Save to cache
-            imageCache.set(cacheKey, imageUrl);
-            res.json({ imageUrl: imageUrl });
-        } else {
-            throw new Error("No images found");
-        }
+        // 3. Save and send
+        imageCache.set(cacheKey, base64Image);
+        res.json({ imageUrl: base64Image });
 
     } catch (error) {
-        console.error("Image Search Error:", error);
-        res.status(500).json({ error: "Failed to fetch image" });
+        console.error("Image Generation Error:", error.message);
+        
+        // 4. THE FALLBACK: Never throw a 500 error. Send a Material 3 placeholder instead!
+        const fallbackUrl = `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(word)}`;
+        res.json({ imageUrl: fallbackUrl });
     }
 });
 
-// --- THIS IS THE CRITICAL LINE THAT KEEPS THE SERVER ALIVE ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
