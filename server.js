@@ -4,13 +4,19 @@ import 'dotenv/config';
 
 const app = express();
 
-// Allow requests from your Cloud86 domain (or anywhere for now)
+// Allow requests from your frontend
 app.use(cors());
 app.use(express.json());
 
+// In-memory cache for images
 const imageCache = new Map(); 
 
-// --- TRANSLATION ENDPOINT ---
+// --- 1. WAKE UP ENDPOINT (For the frontend spinner) ---
+app.get('/api/wakeup', (req, res) => {
+    res.json({ status: "Awake and ready!" });
+});
+
+// --- 2. TRANSLATION ENDPOINT ---
 app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word is required" });
@@ -39,6 +45,8 @@ app.post('/api/translate', async (req, res) => {
             })
         });
 
+        if (!response.ok) throw new Error("Translation API Failed");
+
         const data = await response.json();
         const jsonString = data.candidates[0].content.parts[0].text;
         res.json(JSON.parse(jsonString));
@@ -48,13 +56,15 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
-// --- IMAGE GENERATION ENDPOINT ---
+// --- 3. IMAGE GENERATION ENDPOINT ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word is required" });
 
     const cacheKey = word.toLowerCase().trim();
+
     if (imageCache.has(cacheKey)) {
+        console.log(`⚡ Cache hit for: ${cacheKey}`);
         return res.json({ imageUrl: imageCache.get(cacheKey) });
     }
 
