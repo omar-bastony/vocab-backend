@@ -15,25 +15,9 @@ app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 // --- 2. TRANSLATION (GEMINI) ---
 app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
-    
-    const promptText = `
-      Analyze the German word "${word}".
-      1. Translate to English, Arabic, Russian, Dari, Farsi, Amharic, Tigrinya.
-      2. If it's a Noun: provide its gender (der/die/das), an example sentence, and its plural shortcut (e.g., -en, -er).
-      3. If it's a Verb: provide a conjugation tip (e.g., "Ich lerne, Du lernst") and an example sentence.
-      4. If other: just provide a description and example.
-      Return STRICTLY JSON:
-      {
-        "translations": [{"language":"Name", "meanings":["m1"], "example":"A1 sentence"}],
-        "grammar": {
-          "type": "noun/verb/other",
-          "article": "der/die/das",
-          "plural": "-s / -en",
-          "conjugation": "tip text",
-          "example": "German example sentence"
-        }
-      }
-    `;
+    if (!word) return res.status(400).json({ error: "Word required" });
+
+    const promptText = `Translate German "${word}" to English, Arabic, Russian, Dari, Farsi, Amharic, Tigrinya. Return STRICTLY a JSON array: [{"language":"Name","meanings":["m1","m2"],"example":"A1 sentence"}]`;
 
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -47,7 +31,10 @@ app.post('/api/translate', async (req, res) => {
         });
         const data = await response.json();
         res.json(JSON.parse(data.candidates[0].content.parts[0].text));
-    } catch (err) { res.status(500).send("Error"); }
+    } catch (err) {
+        console.error("Gemini Error:", err);
+        res.status(500).json({ error: "Translation failed" });
+    }
 });
 
 // --- 3. IMAGE SEARCH (UNSPLASH PRODUCTION READY) ---
@@ -101,4 +88,4 @@ app.get('/api/image', async (req, res) => {
 
 // Use Render's default port or 3000
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`)); 
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));  

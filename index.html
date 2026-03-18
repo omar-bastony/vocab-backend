@@ -3,38 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VocabMaster Classroom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <title>A1-A2 Contextual Translator</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="app-container">
     <header>
-      <h1>Vocab Translator</h1>
     </header>
 
-    <section class="main-card">
-      <div class="input-row">
-        <div class="m3-textfield">
-          <textarea id="germanInput" placeholder="Enter German word..." rows="1"></textarea>
-        </div>
-        <button id="translateBtn" class="m3-button">Translate</button>
+    <section class="input-section">
+      <div class="m3-textfield">
+        <textarea id="germanInput" placeholder=" " rows="2"></textarea>
+        <label for="germanInput">German word</label>
       </div>
-
-      <div id="mainImageContainer" class="main-image-container">
-        <div class="image-shimmer shimmer"></div>
-        <img id="mainImage" class="dynamic-image" src="" alt="">
-      </div>
-
-      <div id="grammarDescription" class="grammar-description" style="display: none;">
-        </div>
+      <button id="translateBtn" class="m3-button">Translate</button>
     </section>
 
     <section class="output-section">
-      <div id="translationGrid" class="translation-grid"></div>
+      <div id="translationGrid" class="translation-grid">
+        </div>
     </section>
   </main>
 
   <script src="script.js"></script>
 </body>
-</html>
+</html>  
