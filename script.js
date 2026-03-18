@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { name: 'Farsi', checked: true }, { name: 'Amharic', checked: true },
     { name: 'Tigrinya', checked: true }, { name: 'Spanish', checked: false },
     { name: 'French', checked: false }, { name: 'Turkish', checked: false },
-    { name: 'Ukrainian', checked: false }
+    { name: 'Ukrainian', checked: true }
   ];
 
   availableLanguages.forEach(lang => {
