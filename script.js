@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const BACKEND_URL = 'https://vocab-backend-eight.vercel.app/';
+  const BACKEND_URL = 'https://vocab-backend-eight.vercel.app';
 
   const translateBtn = document.getElementById('translateBtn');
   const germanInput = document.getElementById('germanInput');
