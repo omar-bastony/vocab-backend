@@ -12,7 +12,7 @@ const translationCache = new Map();
 app.get('/', (req, res) => res.status(200).send("Server is running!"));
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
-// --- NEW: AI SPELLCHECK ROUTE ---
+// --- AI SPELLCHECK ROUTE (Powered by Groq) ---
 app.post('/api/spellcheck', async (req, res) => {
     const { word } = req.body;
     if (!word || word.length < 3) return res.json({ corrected: null });
@@ -20,16 +20,22 @@ app.post('/api/spellcheck', async (req, res) => {
     const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${word}". If it is perfectly spelled (including correct capitalization for nouns and correct umlauts), return exactly the string "PERFECT". If it is misspelled, missing an umlaut, or has the wrong capitalization (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel', 'haus' -> 'Haus'), return ONLY the corrected word. Do not return any other text, punctuation, or explanation.`;
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }]
+                model: "llama-3.3-70b-versatile", // Lightning fast, highly accurate model
+                messages: [{ role: "user", content: promptText }],
+                temperature: 0 // Strict, no creativity needed for spellcheck
             })
         });
+        
         const data = await response.json();
-        const result = data.candidates[0].content.parts[0].text.trim();
+        const result = data.choices[0].message.content.trim();
         
         // If the AI says it's perfect, or it just returned the exact same word, return null
         if (result === "PERFECT" || result.toLowerCase() === word.toLowerCase()) {
@@ -43,14 +49,14 @@ app.post('/api/spellcheck', async (req, res) => {
     }
 });
 
-// --- MAIN TRANSLATION ROUTE ---
+// --- MAIN TRANSLATION ROUTE (Powered by Groq) ---
 app.post('/api/translate', async (req, res) => {
     const { word, languages } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
     
     const targetLangs = languages && languages.length > 0 ? languages : ['English'];
     
-    // Check Cache first to save money and increase speed!
+    // Check Cache first to save API calls and make it instant!
     const cacheKey = `${word.toLowerCase()}-${targetLangs.join(',')}`;
     if (translationCache.has(cacheKey)) {
         return res.json(translationCache.get(cacheKey));
@@ -76,28 +82,34 @@ app.post('/api/translate', async (req, res) => {
     }`;
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { response_mime_type: "application/json" }
+                model: "llama-3.3-70b-versatile",
+                messages: [{ role: "user", content: promptText }],
+                response_format: { type: "json_object" }, // Forces Groq to return perfect JSON
+                temperature: 0.1
             })
         });
-        const data = await response.json();
-        const parsedData = JSON.parse(data.candidates[0].content.parts[0].text);
         
-        // Save to cache
+        const data = await response.json();
+        const parsedData = JSON.parse(data.choices[0].message.content);
+        
+        // Save to cache for the next time this word is searched
         translationCache.set(cacheKey, parsedData);
         res.json(parsedData);
     } catch (err) {
-        console.error("Gemini Error:", err);
+        console.error("Groq Error:", err);
         res.status(500).json({ error: "Translation failed" });
     }
 });
 
-// --- IMAGE ROUTE ---
+// --- IMAGE ROUTE (Unsplash - Unchanged) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word required" });
