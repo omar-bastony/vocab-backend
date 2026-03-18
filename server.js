@@ -141,5 +141,12 @@ app.get('/api/image', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));
+// --- VERCEL EXPORT ---
+// We only listen on a port if we are running locally. 
+// Otherwise, we export the app for Vercel's serverless environment.
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 10000;
+    app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Local server on port ${PORT}`));
+}
+
+export default app;
