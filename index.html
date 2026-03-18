@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A1-A2 Contextual Translator</title>
+  <title>A1-A2 Kontext-Übersetzer</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,7 +13,7 @@
       <div class="lang-menu-wrapper">
         <button id="langMenuBtn" class="lang-toggle-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          Languages
+          Sprachen
         </button>
         <div id="langDropdown" class="lang-dropdown hidden">
           <div id="langCheckboxes" class="lang-checkbox-grid">
@@ -27,13 +27,13 @@
         <div class="input-group">
           <div class="m3-textfield">
             <textarea id="germanInput" placeholder=" " rows="1"></textarea>
-            <label for="germanInput">German word</label>
+            <label for="germanInput">Deutsches Wort</label>
           </div>
-          <button id="translateBtn" class="m3-button">Translate</button>
+          <button id="translateBtn" class="m3-button">Übersetzen</button>
         </div>
         
         <div id="umlautSuggestion" class="umlaut-suggestion hidden">
-          Did you mean: <span id="suggestionText" class="suggestion-chip"></span>?
+          Meintest du: <span id="suggestionText" class="suggestion-chip"></span>?
         </div>
 
         <div id="wordDetailsArea" class="word-details-inner" style="display: none;">
@@ -46,7 +46,7 @@
       <div class="central-right">
         <div class="central-image-container">
            <div id="mainImageShimmer" class="image-shimmer shimmer" style="display: none;"></div>
-           <img id="centralImage" class="dynamic-image" src="https://placehold.co/600x400/e0f2f1/006a6a?text=Translation+Visual" alt="Visual Context">
+           <img id="centralImage" class="dynamic-image" src="https://placehold.co/600x400/e0f2f1/006a6a?text=Übersetzung" alt="Visual Context">
         </div>
       </div>
     </section>

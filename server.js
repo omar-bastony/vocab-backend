@@ -7,18 +7,55 @@ app.use(cors());
 app.use(express.json());
 
 const imageCache = new Map();
+const translationCache = new Map();
 
 app.get('/', (req, res) => res.status(200).send("Server is running!"));
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
+// --- NEW: AI SPELLCHECK ROUTE ---
+app.post('/api/spellcheck', async (req, res) => {
+    const { word } = req.body;
+    if (!word || word.length < 3) return res.json({ corrected: null });
+
+    const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${word}". If it is perfectly spelled (including correct capitalization for nouns and correct umlauts), return exactly the string "PERFECT". If it is misspelled, missing an umlaut, or has the wrong capitalization (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel', 'haus' -> 'Haus'), return ONLY the corrected word. Do not return any other text, punctuation, or explanation.`;
+
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }]
+            })
+        });
+        const data = await response.json();
+        const result = data.candidates[0].content.parts[0].text.trim();
+        
+        // If the AI says it's perfect, or it just returned the exact same word, return null
+        if (result === "PERFECT" || result.toLowerCase() === word.toLowerCase()) {
+            res.json({ corrected: null });
+        } else {
+            res.json({ corrected: result });
+        }
+    } catch (err) {
+        console.error("Spellcheck Error:", err);
+        res.json({ corrected: null });
+    }
+});
+
+// --- MAIN TRANSLATION ROUTE ---
 app.post('/api/translate', async (req, res) => {
     const { word, languages } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
     
-    // Fallback if no languages are provided
     const targetLangs = languages && languages.length > 0 ? languages : ['English'];
     
-    // Dynamically build the expected JSON structure based on selected languages
+    // Check Cache first to save money and increase speed!
+    const cacheKey = `${word.toLowerCase()}-${targetLangs.join(',')}`;
+    if (translationCache.has(cacheKey)) {
+        return res.json(translationCache.get(cacheKey));
+    }
+
     const langPromptStr = targetLangs.map(l => 
       `{"language":"${l}","meanings":["m1","m2"],"example":"Translated sentence"}`
     ).join(',\n        ');
@@ -49,13 +86,18 @@ app.post('/api/translate', async (req, res) => {
             })
         });
         const data = await response.json();
-        res.json(JSON.parse(data.candidates[0].content.parts[0].text));
+        const parsedData = JSON.parse(data.candidates[0].content.parts[0].text);
+        
+        // Save to cache
+        translationCache.set(cacheKey, parsedData);
+        res.json(parsedData);
     } catch (err) {
         console.error("Gemini Error:", err);
         res.status(500).json({ error: "Translation failed" });
     }
 });
 
+// --- IMAGE ROUTE ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word required" });

@@ -23,18 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     { name: 'Ukrainian', checked: false }
   ];
 
-  // Render Checkboxes
   availableLanguages.forEach(lang => {
     const label = document.createElement('label');
     label.className = 'checkbox-label';
-    label.innerHTML = `
-      <input type="checkbox" value="${lang.name}" ${lang.checked ? 'checked' : ''}>
-      ${lang.name}
-    `;
+    label.innerHTML = `<input type="checkbox" value="${lang.name}" ${lang.checked ? 'checked' : ''}> ${lang.name}`;
     langCheckboxes.appendChild(label);
   });
 
-  // Toggle Dropdown
   langMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     langDropdown.classList.toggle('hidden');
@@ -49,40 +44,47 @@ document.addEventListener('DOMContentLoaded', () => {
     return Array.from(langCheckboxes.querySelectorAll('input:checked')).map(cb => cb.value);
   }
 
-  // --- Textarea Auto-Resize (No Scrollbar) ---
+  // --- AI Spelling Suggestion (Debounced) ---
+  let typingTimer;
+  const doneTypingInterval = 800; // Wait 800ms after user stops typing
+
   germanInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
-    checkUmlautSuggestion(this.value);
+    
+    // Clear the timer and hide the suggestion while typing
+    clearTimeout(typingTimer);
+    umlautSuggestion.classList.add('hidden');
+
+    const val = this.value.trim();
+    if (val.length >= 3) {
+      typingTimer = setTimeout(() => checkWordSuggestionAI(val), doneTypingInterval);
+    }
   });
 
-  // --- Smart Umlaut Suggestions ---
-  const umlautMap = {
-    'konnen': 'können', 'mussen': 'müssen', 'durfen': 'dürfen', 
-    'fur': 'für', 'uber': 'über', 'apfel': 'Äpfel', 'madchen': 'Mädchen',
-    'schon': 'schön', 'spat': 'spät', 'wahlen': 'wählen', 'ubung': 'Übung',
-    'fruh': 'früh', 'mude': 'müde', 'arzte': 'Ärzte', 'buro': 'Büro'
-  };
-
-  function checkUmlautSuggestion(val) {
-    const cleanVal = val.trim().toLowerCase();
-    if (umlautMap[cleanVal]) {
-      let suggestion = umlautMap[cleanVal];
-      // Preserve capitalization
-      if (val.trim()[0] === val.trim()[0].toUpperCase()) {
-        suggestion = suggestion.charAt(0).toUpperCase() + suggestion.slice(1);
+  async function checkWordSuggestionAI(val) {
+      try {
+          const res = await fetch(`${BACKEND_URL}/api/spellcheck`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ word: val })
+          });
+          if (!res.ok) return;
+          
+          const data = await res.json();
+          if (data.corrected && data.corrected !== val) {
+              suggestionText.textContent = data.corrected;
+              umlautSuggestion.classList.remove('hidden');
+              umlautSuggestion.classList.add('fade-in');
+          }
+      } catch (err) {
+          console.error("AI Spellcheck failed", err);
       }
-      suggestionText.textContent = suggestion;
-      umlautSuggestion.classList.remove('hidden');
-      umlautSuggestion.classList.add('fade-in');
-    } else {
-      umlautSuggestion.classList.add('hidden');
-    }
   }
 
   suggestionText.addEventListener('click', () => {
     germanInput.value = suggestionText.textContent;
-    germanInput.style.height = 'auto'; // Reset height
+    germanInput.style.height = 'auto'; 
     umlautSuggestion.classList.add('hidden');
   });
 
@@ -97,6 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = germanInput.value.trim();
     const selectedLangs = getSelectedLanguages();
     if (!text || selectedLangs.length === 0) return;
+    
+    // Disable button to prevent spam clicking
+    translateBtn.disabled = true;
+    translateBtn.style.opacity = '0.6';
 
     wordDetailsArea.style.display = 'block';
     wordDetailsArea.classList.remove('slide-up');
@@ -134,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
           titleHtml = `<span class="article">${germanData.article}</span> ${germanData.word}`;
           if (germanData.pluralTip) grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
       } else if (germanData.partOfSpeech === 'verb' && germanData.conjugationTips) {
-          grammarHtml = `<span class="tip-label">Conjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
+          grammarHtml = `<span class="tip-label">Konjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
       }
 
       document.getElementById('germanWordTitle').innerHTML = titleHtml;
@@ -166,7 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } catch (error) {
       console.error("Error:", error);
-      translationGrid.innerHTML = `<p style="color: red; text-align: center; width: 100%;">Something went wrong. Check console.</p>`;
+      translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen. Bitte überprüfen Sie die Konsole.</p>`;
+    } finally {
+      // Re-enable the button
+      translateBtn.disabled = false;
+      translateBtn.style.opacity = '1';
     }
   });
 
@@ -175,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     card.className = 'translation-card';
     const isRTL = ['Arabic', 'Dari', 'Farsi'].includes(data.language);
     const textDirection = isRTL ? 'dir="rtl" style="text-align: right;"' : '';
-    const meaningsHtml = data.meanings.length > 1 ? `<span class="multiple-meanings">(Also: ${data.meanings.slice(1).join(', ')})</span>` : '';
+    const meaningsHtml = data.meanings.length > 1 ? `<span class="multiple-meanings">(Auch: ${data.meanings.slice(1).join(', ')})</span>` : '';
 
     card.innerHTML = `
       <div class="card-header"><span class="lang-title">${data.language}</span></div>
@@ -191,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.createElement('div');
     overlay.id = 'server-wakeup-overlay';
     overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(251, 253, 253, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; color: #191c1c; text-align: center; padding: 20px;`;
-    overlay.innerHTML = `<style>@keyframes spin { to { transform: rotate(360deg); } }</style><div style="width: 50px; height: 50px; border: 5px solid #dce4e4; border-top-color: #006a6a; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div><h2 style="margin: 0 0 10px 0;">Waking up the server...</h2><p style="color: #6f7979; max-width: 400px; margin: 0; line-height: 1.5;">Please wait up to 50 seconds while it boots up for you.</p>`;
+    overlay.innerHTML = `<style>@keyframes spin { to { transform: rotate(360deg); } }</style><div style="width: 50px; height: 50px; border: 5px solid #dce4e4; border-top-color: #006a6a; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div><h2 style="margin: 0 0 10px 0;">Server wird gestartet...</h2><p style="color: #6f7979; max-width: 400px; margin: 0; line-height: 1.5;">Da diese App ein kostenloses Backend nutzt, kann der Start bis zu 50 Sekunden dauern. Bitte haben Sie etwas Geduld.</p>`;
     document.body.appendChild(overlay);
   }
 
@@ -206,6 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showLoadingError() {
     const overlay = document.getElementById('server-wakeup-overlay');
-    if (overlay) overlay.innerHTML = `<h2 style="color: #ba1a1a;">Connection Failed</h2><button onclick="location.reload()" class="m3-button">Try Again</button>`;
+    if (overlay) overlay.innerHTML = `<h2 style="color: #ba1a1a;">Verbindung fehlgeschlagen</h2><button onclick="location.reload()" class="m3-button">Erneut versuchen</button>`;
   }
 });
