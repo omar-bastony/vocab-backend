@@ -17,7 +17,6 @@ body {
   padding: 1rem 2rem;
   display: flex;
   justify-content: center;
-  /* Prevent full-page scroll to fit everything on one screen */
   height: 100vh;
   box-sizing: border-box;
   overflow: hidden; 
@@ -31,16 +30,9 @@ body {
   height: 100%;
 }
 
-/* --- Header & Dropdown Menu --- */
-.top-header {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
-  z-index: 100;
-}
-
+/* --- Header & Dropdown --- */
+.top-header { display: flex; justify-content: flex-end; margin-bottom: 1rem; z-index: 100; }
 .lang-menu-wrapper { position: relative; }
-
 .lang-toggle-btn {
   background: white; border: 1px solid #dce4e4; padding: 0.6rem 1.2rem;
   border-radius: 20px; font-family: inherit; font-weight: 500; font-size: 1rem;
@@ -53,30 +45,21 @@ body {
   position: absolute; right: 0; top: 120%; background: white;
   border-radius: var(--border-radius-medium); box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   padding: 1rem; width: 300px; z-index: 100; border: 1px solid #eef2f2;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  transform-origin: top right;
+  transition: opacity 0.2s ease, transform 0.2s ease; transform-origin: top right;
 }
-.lang-dropdown.hidden {
-  opacity: 0; pointer-events: none; transform: scale(0.95) translateY(-10px);
-}
-.lang-checkbox-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;
-}
-.checkbox-label {
-  display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; color: #333;
-}
+.lang-dropdown.hidden { opacity: 0; pointer-events: none; transform: scale(0.95) translateY(-10px); }
+.lang-checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; color: #333; }
 .checkbox-label input[type="checkbox"] { accent-color: var(--md-sys-color-primary); width: 16px; height: 16px; cursor: pointer; }
 
-/* --- Merged Central Box --- */
+/* --- Central Box & Input --- */
 .central-box {
   display: flex; flex-direction: row; background-color: #e0f2f1;
   border-radius: var(--border-radius-large); padding: 1.5rem; gap: 2rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04); flex-shrink: 0;
 }
-
 .central-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .central-right { flex: 0 0 280px; }
-
 .input-group { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 0.5rem; }
 
 .m3-textfield { position: relative; flex: 1; }
@@ -84,22 +67,16 @@ body {
   width: 100%; padding: 0.8rem 1rem; box-sizing: border-box;
   border: 1.5px solid var(--md-sys-color-outline); border-radius: var(--border-radius-medium);
   background-color: var(--md-sys-color-surface); font-size: 1.25rem; font-family: inherit;
-  resize: none; /* Removed manual resize */
-  overflow: hidden; /* Removed scrollbar */
-  min-height: 52px;
+  resize: none; overflow: hidden; min-height: 52px;
 }
 .m3-textfield label {
   position: absolute; top: 0.9rem; left: 1rem; color: var(--md-sys-color-outline); pointer-events: none;
-  transition: 0.2s ease all; 
-  background: transparent; /* Changed from var(--md-sys-color-surface) */
-  padding: 0 4px;
+  transition: 0.2s ease all; background: transparent; padding: 0 4px;
 }
 .m3-textfield textarea:focus ~ label, .m3-textfield textarea:not(:placeholder-shown) ~ label {
   top: -0.6rem; font-size: 0.85rem; color: var(--md-sys-color-primary); font-weight: 500;
-  background: #e0f2f1; /* Perfectly matches the central-box color */
-  border-radius: 4px;
+  background: #e0f2f1; border-radius: 4px;
 }
-
 .m3-button {
   background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
   border: none; padding: 0.9rem 1.8rem; border-radius: 30px; height: 52px;
@@ -107,7 +84,7 @@ body {
 }
 .m3-button:hover { background-color: #005555; transform: scale(1.02); }
 
-/* Umlaut Suggestion */
+/* --- Spelling Suggestions --- */
 .umlaut-suggestion { font-size: 0.95rem; color: #555; margin-left: 0.5rem; display: flex; align-items: center; gap: 6px; }
 .suggestion-chip {
   background: #cce8e7; color: #004d4d; padding: 2px 10px; border-radius: 12px;
@@ -116,9 +93,10 @@ body {
 .suggestion-chip:hover { background: #b3dfde; }
 .hidden { display: none !important; }
 
-/* Word Details Inner */
+/* --- Word Details Inner (WITH NEW SPEAKER ICONS) --- */
 .word-details-inner { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,106,106,0.15); }
-.main-word { font-size: 2.2rem; margin: 0 0 0.5rem 0; font-weight: 700; }
+.title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem; }
+.main-word { font-size: 2.2rem; margin: 0; font-weight: 700; }
 .article { color: var(--md-sys-color-outline); font-weight: 400; }
 .grammar-tips { font-size: 1.05rem; margin-bottom: 0.8rem; }
 .tip-label { color: #555; font-weight: 500; }
@@ -126,44 +104,44 @@ body {
 .conj-tip { color: #006a6a; font-style: italic; font-weight: 600; margin-left: 0.3rem; }
 .german-example { font-size: 1.15rem; color: #222; margin: 0; font-style: italic; }
 
-.central-image-container {
-  width: 100%; height: 180px; border-radius: var(--border-radius-medium);
-  overflow: hidden; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
+.central-image-container { width: 100%; height: 180px; border-radius: var(--border-radius-medium); overflow: hidden; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .dynamic-image { width: 100%; height: 100%; object-fit: cover; }
 
-/* --- Output Section (Compact to fit without page scroll) --- */
-/* --- Output Section (Compact to fit without page scroll) --- */
-.output-section {
-  flex: 1; 
-  margin-top: 1.5rem; 
-  overflow-y: auto; /* Internal scroll ONLY if absolutely needed */
-  padding-bottom: 1rem;
-  
-  /* NEW: Hide scrollbar for IE, Edge and Firefox */
-  -ms-overflow-style: none;  
-  scrollbar-width: none;  
+/* --- Speaker Icon Button Styles --- */
+.speak-btn {
+  background: none; border: none; color: var(--md-sys-color-primary);
+  cursor: pointer; padding: 6px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background-color 0.2s, transform 0.2s;
 }
+.speak-btn:hover { background-color: rgba(0, 106, 106, 0.15); transform: scale(1.1); }
+.speak-btn svg { width: 22px; height: 22px; }
 
-/* NEW: Hide scrollbar for Chrome, Safari and Opera */
-.output-section::-webkit-scrollbar {
-  display: none;
+/* --- Output Section & Cards --- */
+.output-section {
+  flex: 1; margin-top: 1.5rem; overflow-y: auto; padding-bottom: 1rem;
+  -ms-overflow-style: none; scrollbar-width: none; 
 }
-.translation-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem;
-}
+.output-section::-webkit-scrollbar { display: none; }
+.translation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
 
 .translation-card {
   background-color: #ffffff; border-radius: var(--border-radius-large);
   padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eef2f2;
   display: flex; flex-direction: column; gap: 0.4rem;
 }
-
 .card-header { border-bottom: 1px solid #f0f0f0; padding-bottom: 0.3rem; margin-bottom: 0.3rem; }
 .lang-title { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: var(--md-sys-color-outline); letter-spacing: 1px; }
-.translated-word { font-size: 1.3rem; font-weight: bold; margin: 0; color: var(--md-sys-color-primary); }
+
+/* Row to keep Word and Speaker Icon aligned */
+.word-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.translated-word { font-size: 1.3rem; font-weight: bold; margin: 0; color: var(--md-sys-color-primary); flex: 1; }
 .multiple-meanings { font-size: 0.9rem; font-style: italic; color: #777; font-weight: 400; }
 .example-sentence { font-size: 1rem; margin-top: 0.2rem; color: #444; }
+
+.card-speak-btn { color: var(--md-sys-color-outline); }
+.card-speak-btn:hover { color: var(--md-sys-color-primary); background-color: #e0f2f1; }
+.card-speak-btn svg { width: 18px; height: 18px; }
 
 /* --- Animations --- */
 .shimmer {
@@ -171,15 +149,13 @@ body {
   background-size: 200% 100%; animation: shimmerAnim 1.5s infinite linear;
 }
 @keyframes shimmerAnim { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-
 .fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
 .slide-up { animation: slideUp 0.4s ease-out forwards; opacity: 0; transform: translateY(10px); }
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 768px) {
-  body { overflow: auto; height: auto; } /* Allow scrolling on mobile */
+  body { overflow: auto; height: auto; }
   .central-box { flex-direction: column; }
   .central-right { flex: auto; height: 200px; }
   .input-group { flex-direction: column; }

@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const BACKEND_URL = 'https://vocab-backend-eight.vercel.app';
+  // Make sure this points to your deployed Vercel URL
+  const BACKEND_URL = 'https://vocab-backend-eight.vercel.app'; 
 
   const translateBtn = document.getElementById('translateBtn');
   const germanInput = document.getElementById('germanInput');
@@ -12,8 +13,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const umlautSuggestion = document.getElementById('umlautSuggestion');
   const suggestionText = document.getElementById('suggestionText');
+  
+  const germanSpeakBtn = document.getElementById('germanSpeakBtn');
 
-  // --- Language Setup ---
+  // --- TTS Mapping (Language Codes) ---
+  const ttsLanguageCodes = {
+    'English': 'en-US',
+    'Arabic': 'ar-SA',
+    'Russian': 'ru-RU',
+    'Dari': 'fa-AF', // May fall back to default Persian depending on device
+    'Farsi': 'fa-IR',
+    'Amharic': 'am-ET',
+    'Tigrinya': 'ti-ET',
+    'Spanish': 'es-ES',
+    'French': 'fr-FR',
+    'Turkish': 'tr-TR',
+    'Ukrainian': 'uk-UA'
+  };
+
+  // --- Audio Player Engine ---
+  function playAudio(text, langCode) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Interrupt any currently playing audio
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = langCode || 'en-US';
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.warn("Text-to-speech is not supported in this browser.");
+    }
+  }
+
+  // --- Language Checkboxes Setup ---
   const availableLanguages = [
     { name: 'English', checked: true }, { name: 'Arabic', checked: true },
     { name: 'Russian', checked: true }, { name: 'Dari', checked: true },
@@ -34,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
     langDropdown.classList.toggle('hidden');
   });
+  
   document.addEventListener('click', (e) => {
     if (!langDropdown.contains(e.target) && e.target !== langMenuBtn) {
       langDropdown.classList.add('hidden');
@@ -46,13 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- AI Spelling Suggestion (Debounced) ---
   let typingTimer;
-  const doneTypingInterval = 800; // Wait 800ms after user stops typing
+  const doneTypingInterval = 800; 
 
   germanInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
     
-    // Clear the timer and hide the suggestion while typing
     clearTimeout(typingTimer);
     umlautSuggestion.classList.add('hidden');
 
@@ -88,22 +118,20 @@ document.addEventListener('DOMContentLoaded', () => {
     umlautSuggestion.classList.add('hidden');
   });
 
-
-
   // --- Translation Logic ---
   translateBtn.addEventListener('click', async () => {
     const text = germanInput.value.trim();
     const selectedLangs = getSelectedLanguages();
     if (!text || selectedLangs.length === 0) return;
     
-    // Disable button to prevent spam clicking
     translateBtn.disabled = true;
     translateBtn.style.opacity = '0.6';
+    germanSpeakBtn.classList.add('hidden'); // Hide speaker icon while loading
 
     wordDetailsArea.style.display = 'block';
     wordDetailsArea.classList.remove('slide-up');
     
-    document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2rem; width: 50%; border-radius: 4px;"></div>';
+    document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2.2rem; width: 50%; border-radius: 4px;"></div>';
     document.getElementById('grammarTips').innerHTML = '';
     document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
     
@@ -131,9 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       let titleHtml = germanData.word;
       let grammarHtml = '';
+      let textToSpeak = germanData.word;
 
+      // Smart formatting and speech setup based on word type
       if (germanData.partOfSpeech === 'noun' && germanData.article) {
           titleHtml = `<span class="article">${germanData.article}</span> ${germanData.word}`;
+          textToSpeak = `${germanData.article} ${germanData.word}`; // Speak article + word
           if (germanData.pluralTip) grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
       } else if (germanData.partOfSpeech === 'verb' && germanData.conjugationTips) {
           grammarHtml = `<span class="tip-label">Konjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
@@ -143,6 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('grammarTips').innerHTML = grammarHtml;
       document.getElementById('germanExample').innerText = `"${germanData.example}"`;
       wordDetailsArea.classList.add('slide-up');
+
+      // Bind TTS to the main German button and show it
+      germanSpeakBtn.onclick = () => playAudio(textToSpeak, 'de-DE');
+      germanSpeakBtn.classList.remove('hidden');
 
       translationGrid.innerHTML = ''; 
       data.translations.forEach((langData, index) => {
@@ -170,27 +205,39 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Error:", error);
       translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen. Bitte überprüfen Sie die Konsole.</p>`;
     } finally {
-      // Re-enable the button
       translateBtn.disabled = false;
       translateBtn.style.opacity = '1';
     }
   });
 
+  // --- Translation Card Renderer ---
   function createTranslationCard(data) {
     const card = document.createElement('div');
     card.className = 'translation-card';
     const isRTL = ['Arabic', 'Dari', 'Farsi'].includes(data.language);
     const textDirection = isRTL ? 'dir="rtl" style="text-align: right;"' : '';
     const meaningsHtml = data.meanings.length > 1 ? `<span class="multiple-meanings">(Auch: ${data.meanings.slice(1).join(', ')})</span>` : '';
+    
+    const translatedWord = data.meanings[0];
+    const ttsCode = ttsLanguageCodes[data.language];
 
     card.innerHTML = `
       <div class="card-header"><span class="lang-title">${data.language}</span></div>
       <div class="card-body" ${textDirection}>
-        <p class="translated-word">${data.meanings[0]} ${meaningsHtml}</p>
+        <div class="word-row">
+          <p class="translated-word">${translatedWord} ${meaningsHtml}</p>
+          <button class="speak-btn card-speak-btn" aria-label="Aussprache anhören" title="Aussprache anhören">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+          </button>
+        </div>
         <p class="example-sentence">${data.example}</p>
       </div>
     `;
+
+    // Securely bind the audio player event to the button inside this specific card
+    const speakBtn = card.querySelector('.card-speak-btn');
+    speakBtn.addEventListener('click', () => playAudio(translatedWord, ttsCode));
+
     return card;
   }
-
 });
