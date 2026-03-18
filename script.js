@@ -104,10 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- DYNAMIC LOADING SCREEN BUILDER ---
-// --- DYNAMIC LOADING SCREEN BUILDER ---
   function createLoadingScreen() {
     const overlay = document.createElement('div');
     overlay.id = 'server-wakeup-overlay';
+    // Style the overlay using Material 3 Surface coloring
     overlay.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(251, 253, 253, 0.95); z-index: 9999;
