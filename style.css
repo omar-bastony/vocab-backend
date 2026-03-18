@@ -28,16 +28,7 @@ body {
   background-color: var(--md-sys-color-surface);
   font-size: 1rem; resize: vertical;
 }
-.m3-textfield label {
-  position: absolute; top: 1rem; left: 1rem;
-  color: var(--md-sys-color-outline); pointer-events: none;
-  transition: 0.2s ease all; background: var(--md-sys-color-surface);
-  padding: 0 4px;
-}
-.m3-textfield textarea:focus ~ label,
-.m3-textfield textarea:not(:placeholder-shown) ~ label {
-  top: -0.5rem; font-size: 0.75rem; color: var(--md-sys-color-primary);
-}
+
 
 .m3-button {
   background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
