@@ -9,7 +9,9 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  /* Updated to modern font and increased base size for classroom view */
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 1.15rem; 
   background-color: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
   margin: 0;
@@ -18,15 +20,15 @@ body {
   justify-content: center;
 }
 
-.app-container { max-width: 900px; width: 100%; }
+.app-container { max-width: 1000px; width: 100%; }
 
 .m3-textfield { position: relative; margin-bottom: 1rem; }
 .m3-textfield textarea {
   width: 100%; padding: 1rem; box-sizing: border-box;
-  border: 1px solid var(--md-sys-color-outline);
+  border: 1.5px solid var(--md-sys-color-outline);
   border-radius: var(--border-radius-medium);
   background-color: var(--md-sys-color-surface);
-  font-size: 1rem; resize: vertical;
+  font-size: 1.25rem; font-family: inherit; resize: vertical;
 }
 .m3-textfield label {
   position: absolute; top: 1rem; left: 1rem;
@@ -36,35 +38,96 @@ body {
 }
 .m3-textfield textarea:focus ~ label,
 .m3-textfield textarea:not(:placeholder-shown) ~ label {
-  top: -0.5rem; font-size: 0.75rem; color: var(--md-sys-color-primary);
+  top: -0.6rem; font-size: 0.9rem; color: var(--md-sys-color-primary); font-weight: 500;
 }
 
 .m3-button {
   background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
-  border: none; padding: 0.75rem 1.5rem; border-radius: 20px;
-  font-size: 1rem; cursor: pointer; transition: 0.2s;
+  border: none; padding: 0.85rem 2rem; border-radius: 30px;
+  font-size: 1.15rem; font-weight: 500; cursor: pointer; transition: 0.2s;
+  font-family: inherit;
 }
-.m3-button:hover { background-color: #005555; }
+.m3-button:hover { background-color: #005555; transform: scale(1.02); }
 
+/* --- NEW: Central Word Details --- */
+.word-details {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2rem;
+  background-color: #e0f2f1;
+  padding: 2rem;
+  border-radius: var(--border-radius-large);
+  margin-top: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.word-info { flex: 1; }
+
+.main-word {
+  font-size: 2.5rem;
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
+}
+
+.article { color: var(--md-sys-color-outline); font-weight: 400; }
+
+.grammar-tips {
+  font-size: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.tip-label { color: #555; font-weight: 500; }
+.plural-tip { color: #d9381e; font-style: italic; font-weight: 600; margin-left: 0.3rem; }
+.conj-tip { color: #006a6a; font-style: italic; font-weight: 500; margin-left: 0.3rem; }
+
+.german-example {
+  font-size: 1.25rem;
+  color: #333;
+  margin: 0;
+  border-left: 4px solid var(--md-sys-color-primary);
+  padding-left: 1rem;
+  font-style: italic;
+}
+
+.central-image-container {
+  width: 250px;
+  height: 200px;
+  flex-shrink: 0;
+  border-radius: var(--border-radius-medium);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.dynamic-image { width: 100%; height: 100%; object-fit: cover; }
+
+@media (max-width: 768px) {
+  .word-details { flex-direction: column; text-align: center; }
+  .german-example { border-left: none; padding-left: 0; border-top: 2px solid var(--md-sys-color-primary); padding-top: 1rem; }
+  .central-image-container { width: 100%; }
+}
+
+/* --- Translation Grid (No Images) --- */
 .translation-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem; margin-top: 1rem;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem; margin-top: 2rem;
 }
 
 .translation-card {
-  background-color: #e0f2f1; border-radius: var(--border-radius-large);
-  padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: #ffffff; border-radius: var(--border-radius-large);
+  padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid #eef2f2;
   display: flex; flex-direction: column; gap: 0.5rem;
 }
 
-.lang-title { font-size: 0.85rem; text-transform: uppercase; color: var(--md-sys-color-outline); margin: 0; }
-.translated-word { font-size: 1.25rem; font-weight: bold; margin: 0; }
-.multiple-meanings { font-size: 0.85rem; font-style: italic; color: #555; margin: 0; }
-.example-sentence { font-size: 0.95rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.05); }
+.lang-title { font-size: 1rem; text-transform: uppercase; color: var(--md-sys-color-outline); margin: 0; letter-spacing: 1px; }
+.translated-word { font-size: 1.5rem; font-weight: bold; margin: 0; color: var(--md-sys-color-primary); }
+.multiple-meanings { font-size: 1rem; font-style: italic; color: #777; margin: 0; }
+.example-sentence { font-size: 1.15rem; margin-top: 0.5rem; padding-top: 0.8rem; border-top: 1px solid #eee; }
 
-/* Shimmer Effect */
+/* --- Animations & Loading --- */
 .shimmer {
-  background: #e0f2f1;
+  background: #eef2f2;
   background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
   background-size: 200% 100%;
   animation: shimmerAnim 1.5s infinite linear;
@@ -72,9 +135,21 @@ body {
 .shimmer * { visibility: hidden; }
 @keyframes shimmerAnim { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
-.image-container {
-  margin-top: 1rem; border-radius: var(--border-radius-medium);
-  overflow: hidden; position: relative; height: 120px; width: 100%;
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+  opacity: 0;
 }
-.dynamic-image { width: 100%; height: 100%; object-fit: cover; display: none; }
-.image-shimmer { width: 100%; height: 100%; }  
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.slide-up {
+  animation: slideUp 0.5s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -4,27 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>A1-A2 Contextual Translator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="app-container">
-    <header>
+    <header class="fade-in">
     </header>
 
-    <section class="input-section">
+    <section class="input-section fade-in">
       <div class="m3-textfield">
         <textarea id="germanInput" placeholder=" " rows="2"></textarea>
         <label for="germanInput">German word</label>
       </div>
       <button id="translateBtn" class="m3-button">Translate</button>
+
+      <div id="wordDetailsArea" class="word-details" style="display: none;">
+        <div class="word-info">
+          <h2 id="germanWordTitle" class="main-word"></h2>
+          <div id="grammarTips" class="grammar-tips"></div>
+          <p id="germanExample" class="german-example"></p>
+        </div>
+        <div class="central-image-container">
+           <div id="mainImageShimmer" class="image-shimmer shimmer"></div>
+           <img id="centralImage" class="dynamic-image" src="" alt="Visual Context">
+        </div>
+      </div>
     </section>
 
     <section class="output-section">
       <div id="translationGrid" class="translation-grid">
-        </div>
+      </div>
     </section>
   </main>
 
   <script src="script.js"></script>
 </body>
-</html>  
+</html>

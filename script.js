@@ -1,16 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // ⚠️ IMPORTANT: Paste your Render URL here (no trailing slash)
   const BACKEND_URL = 'https://my-vocab-api-5lb7.onrender.com';
 
   const translateBtn = document.getElementById('translateBtn');
   const germanInput = document.getElementById('germanInput');
   const translationGrid = document.getElementById('translationGrid');
+  const wordDetailsArea = document.getElementById('wordDetailsArea');
+  
   const targetLanguages = ['English', 'Arabic', 'Russian', 'Dari', 'Farsi', 'Amharic', 'Tigrinya']; 
 
-  // --- WAKE UP & SPINNER LOGIC ---
-  createLoadingScreen(); // Injects the visual spinner into the page
+  createLoadingScreen();
 
-  // Ping the server. Once it replies, hide the spinner.
   fetch(`${BACKEND_URL}/api/wakeup`)
     .then(response => {
       if (response.ok) {
@@ -25,22 +24,32 @@ document.addEventListener('DOMContentLoaded', () => {
       showLoadingError();
     });
 
-  // --- TRANSLATION LOGIC ---
   translateBtn.addEventListener('click', async () => {
     const text = germanInput.value.trim();
     if (!text) return;
 
-    // 1. Show Shimmer Loading Cards
+    // 1. Show Shimmer Loading States
+    wordDetailsArea.style.display = 'flex';
+    wordDetailsArea.classList.remove('slide-up');
+    
+    // Reset details area for loading
+    document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2rem; width: 50%; border-radius: 4px;"></div>';
+    document.getElementById('grammarTips').innerHTML = '';
+    document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
+    
+    document.getElementById('centralImage').style.display = 'none';
+    document.getElementById('mainImageShimmer').style.display = 'block';
+
     translationGrid.innerHTML = '';
     targetLanguages.forEach(() => {
       const skeleton = document.createElement('div');
       skeleton.className = 'translation-card shimmer';
-      skeleton.innerHTML = '<div style="height: 200px;"></div>';
+      skeleton.innerHTML = '<div style="height: 150px;"></div>';
       translationGrid.appendChild(skeleton);
     });
 
     try {
-      // 2. Fetch Text Translations
+      // 2. Fetch Text Translations & Grammar
       const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -48,37 +57,62 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       if (!textRes.ok) throw new Error("Translation request failed");
-      const translations = await textRes.json();
+      const data = await textRes.json();
       
-      // 3. Render Text Cards
+      // 3. Render Central Description Area
+      const germanData = data.german;
+      
+      let titleHtml = germanData.word;
+      let grammarHtml = '';
+
+      if (germanData.partOfSpeech === 'noun' && germanData.article) {
+          titleHtml = `<span class="article">${germanData.article}</span> ${germanData.word}`;
+          if (germanData.pluralTip) {
+              grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
+          }
+      } else if (germanData.partOfSpeech === 'verb' && germanData.conjugationTips) {
+          grammarHtml = `<span class="tip-label">Conjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
+      }
+
+      document.getElementById('germanWordTitle').innerHTML = titleHtml;
+      document.getElementById('grammarTips').innerHTML = grammarHtml;
+      document.getElementById('germanExample').innerText = `"${germanData.example}"`;
+      
+      // Apply entrance animation
+      wordDetailsArea.classList.add('slide-up');
+
+      // 4. Render Text Cards (No Images inside them anymore)
       translationGrid.innerHTML = ''; 
-      translations.forEach(langData => {
-        translationGrid.appendChild(createTranslationCard(langData));
+      data.translations.forEach((langData, index) => {
+        const card = createTranslationCard(langData);
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('fade-in');
+        translationGrid.appendChild(card);
       });
 
-      // 4. Fetch Images
-      const imgRes = await fetch(`${BACKEND_URL}/api/image?word=${encodeURIComponent(text)}`);
+      // 5. Fetch Image for Central Area
+      const imgRes = await fetch(`${BACKEND_URL}/api/image?word=${encodeURIComponent(germanData.word)}`);
       if (!imgRes.ok) throw new Error("Image request failed");
       const imgData = await imgRes.json();
 
-      // 5. Inject Images
       if (imgData.imageUrl) {
-        document.querySelectorAll('.image-container').forEach(container => {
-          const img = container.querySelector('.dynamic-image');
-          const shimmer = container.querySelector('.image-shimmer');
+          const img = document.getElementById('centralImage');
+          const shimmer = document.getElementById('mainImageShimmer');
           img.src = imgData.imageUrl;
-          img.style.display = 'block';
-          shimmer.style.display = 'none'; 
-        });
+          img.onload = () => {
+            img.style.display = 'block';
+            img.classList.add('fade-in');
+            shimmer.style.display = 'none'; 
+          };
       }
 
     } catch (error) {
       console.error("Error:", error);
-      translationGrid.innerHTML = `<p style="color: red; text-align: center;">Something went wrong. Check console.</p>`;
+      translationGrid.innerHTML = `<p style="color: red; text-align: center; width: 100%;">Something went wrong. Check console.</p>`;
     }
   });
 
-  // --- UI RENDERER ---
+  // --- UI RENDERER (Cleaned up, no images) ---
   function createTranslationCard(data) {
     const card = document.createElement('div');
     card.className = 'translation-card';
@@ -95,26 +129,20 @@ document.addEventListener('DOMContentLoaded', () => {
         ${meaningsHtml}
         <p class="example-sentence">${data.example}</p>
       </div>
-      <div class="image-container" style="margin-top: 1rem; border-radius: 12px; overflow: hidden; position: relative; height: 120px; width: 100%;">
-         <div class="image-shimmer shimmer" style="width: 100%; height: 100%;"></div>
-         <img class="dynamic-image" src="" alt="Visual for ${data.meanings[0]}" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-      </div>
     `;
     return card;
   }
 
-  // --- DYNAMIC LOADING SCREEN BUILDER ---
+  // --- LOADING SCREENS ---
   function createLoadingScreen() {
     const overlay = document.createElement('div');
     overlay.id = 'server-wakeup-overlay';
-    // Style the overlay using Material 3 Surface coloring
     overlay.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(251, 253, 253, 0.95); z-index: 9999;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      font-family: system-ui, sans-serif; color: #191c1c; text-align: center; padding: 20px;
+      font-family: 'Inter', sans-serif; color: #191c1c; text-align: center; padding: 20px;
     `;
-    
     overlay.innerHTML = `
       <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
       <div style="width: 50px; height: 50px; border: 5px solid #dce4e4; border-top-color: #006a6a; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
@@ -129,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function removeLoadingScreen() {
     const overlay = document.getElementById('server-wakeup-overlay');
-    // Fade out effect
     if (overlay) {
       overlay.style.transition = 'opacity 0.5s ease';
       overlay.style.opacity = '0';
@@ -143,10 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
        overlay.innerHTML = `
          <h2 style="color: #ba1a1a; margin: 0 0 10px 0;">Connection Failed</h2>
          <p style="color: #6f7979; max-width: 400px; margin: 0; line-height: 1.5;">
-           Could not connect to the backend server. Make sure your Render deployment is live and your BACKEND_URL is correct.
+           Could not connect to the backend server.
          </p>
-         <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 24px; background: #006a6a; color: white; border: none; border-radius: 20px; font-size: 1rem; cursor: pointer;">Try Again</button>
+         <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 24px; background: #006a6a; color: white; border: none; border-radius: 20px; font-size: 1.2rem; cursor: pointer;">Try Again</button>
        `;
     }
   }
-});  
+});

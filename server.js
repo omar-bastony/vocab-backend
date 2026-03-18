@@ -8,7 +8,7 @@ app.use(express.json());
 
 const imageCache = new Map();
 
-// --- 1. HEALTH CHECK (Critical for Render Deploy) ---
+// --- 1. HEALTH CHECK ---
 app.get('/', (req, res) => res.status(200).send("Server is running!"));
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
@@ -17,7 +17,27 @@ app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
 
-    const promptText = `Translate German "${word}" to English, Arabic, Russian, Dari, Farsi, Amharic, Tigrinya. Return STRICTLY a JSON array: [{"language":"Name","meanings":["m1","m2"],"example":"A1 sentence"}]`;
+    // UPDATED PROMPT: Request grammar details and part of speech formatting
+    const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
+    {
+      "german": {
+        "word": "the base word",
+        "partOfSpeech": "noun" or "verb" or "other",
+        "article": "der/die/das" (only if noun, otherwise null),
+        "pluralTip": "e.g., -s, -en, -er" (only if noun, otherwise null),
+        "conjugationTips": "e.g., ich gehe, du gehst, er/sie/es geht" (only if verb, otherwise null),
+        "example": "A simple A1/A2 German example sentence."
+      },
+      "translations": [
+        {"language":"English","meanings":["m1","m2"],"example":"Translated sentence"},
+        {"language":"Arabic","meanings":["m1","m2"],"example":"Translated sentence"},
+        {"language":"Russian","meanings":["m1","m2"],"example":"Translated sentence"},
+        {"language":"Dari","meanings":["m1","m2"],"example":"Translated sentence"},
+        {"language":"Farsi","meanings":["m1","m2"],"example":"Translated sentence"},
+        {"language":"Amharic","meanings":["m1","m2"],"example":"Translated sentence"},
+        {"language":"Tigrinya","meanings":["m1","m2"],"example":"Translated sentence"}
+      ]
+    }`;
 
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -37,14 +57,13 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
-// --- 3. IMAGE SEARCH (UNSPLASH PRODUCTION READY) ---
+// --- 3. IMAGE SEARCH (UNSPLASH) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word required" });
 
     if (imageCache.has(word)) return res.json(imageCache.get(word));
 
-    // Fallback URL Generator
     const getFallback = (w) => ({
         imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(w)}`,
         photographer: null,
@@ -52,7 +71,6 @@ app.get('/api/image', async (req, res) => {
         downloadLocation: null
     });
 
-    // Check if Unsplash Key is missing
     if (!process.env.UNSPLASH_ACCESS_KEY) {
         console.warn("⚠️ UNSPLASH_ACCESS_KEY is missing. Using placeholder.");
         return res.json(getFallback(word));
@@ -86,6 +104,5 @@ app.get('/api/image', async (req, res) => {
     }
 });
 
-// Use Render's default port or 3000
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));  
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));
