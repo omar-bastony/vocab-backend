@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const BACKEND_URL = 'https://my-vocab-api-5lb7.onrender.com';
+  const BACKEND_URL = 'https://vocab-backend-eight.vercel.app/';
 
   const translateBtn = document.getElementById('translateBtn');
   const germanInput = document.getElementById('germanInput');
@@ -88,11 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     umlautSuggestion.classList.add('hidden');
   });
 
-  // --- Server Wakeup ---
-  createLoadingScreen();
-  fetch(`${BACKEND_URL}/api/wakeup`)
-    .then(res => res.ok ? removeLoadingScreen() : showLoadingError())
-    .catch(() => showLoadingError());
+
 
   // --- Translation Logic ---
   translateBtn.addEventListener('click', async () => {
@@ -197,25 +193,4 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   }
 
-  function createLoadingScreen() {
-    const overlay = document.createElement('div');
-    overlay.id = 'server-wakeup-overlay';
-    overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(251, 253, 253, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; color: #191c1c; text-align: center; padding: 20px;`;
-    overlay.innerHTML = `<style>@keyframes spin { to { transform: rotate(360deg); } }</style><div style="width: 50px; height: 50px; border: 5px solid #dce4e4; border-top-color: #006a6a; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div><h2 style="margin: 0 0 10px 0;">Server wird gestartet...</h2><p style="color: #6f7979; max-width: 400px; margin: 0; line-height: 1.5;">Da diese App ein kostenloses Backend nutzt, kann der Start bis zu 50 Sekunden dauern. Bitte haben Sie etwas Geduld.</p>`;
-    document.body.appendChild(overlay);
-  }
-
-  function removeLoadingScreen() {
-    const overlay = document.getElementById('server-wakeup-overlay');
-    if (overlay) {
-      overlay.style.transition = 'opacity 0.5s ease';
-      overlay.style.opacity = '0';
-      setTimeout(() => overlay.remove(), 500);
-    }
-  }
-
-  function showLoadingError() {
-    const overlay = document.getElementById('server-wakeup-overlay');
-    if (overlay) overlay.innerHTML = `<h2 style="color: #ba1a1a;">Verbindung fehlgeschlagen</h2><button onclick="location.reload()" class="m3-button">Erneut versuchen</button>`;
-  }
 });
