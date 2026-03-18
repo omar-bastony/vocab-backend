@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A1-A2 Contextual Translator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-container">
+    <header>
+      <h1>Vocab Translator</h1>
+      <p>Enter a German word (A1-A2) to translate.</p>
+    </header>
+
+    <section class="input-section">
+      <div class="m3-textfield">
+        <textarea id="germanInput" placeholder=" " rows="2"></textarea>
+        <label for="germanInput">German word (e.g., Linsen)</label>
+      </div>
+      <button id="translateBtn" class="m3-button">Translate</button>
+    </section>
+
+    <section class="output-section">
+      <h2 class="output-title">Translations</h2>
+      <div id="translationGrid" class="translation-grid">
+        </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
