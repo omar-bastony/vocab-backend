@@ -6,33 +6,101 @@ document.addEventListener('DOMContentLoaded', () => {
   const translationGrid = document.getElementById('translationGrid');
   const wordDetailsArea = document.getElementById('wordDetailsArea');
   
-  const targetLanguages = ['English', 'Arabic', 'Russian', 'Dari', 'Farsi', 'Amharic', 'Tigrinya']; 
+  const langMenuBtn = document.getElementById('langMenuBtn');
+  const langDropdown = document.getElementById('langDropdown');
+  const langCheckboxes = document.getElementById('langCheckboxes');
 
-  createLoadingScreen();
+  const umlautSuggestion = document.getElementById('umlautSuggestion');
+  const suggestionText = document.getElementById('suggestionText');
 
-  fetch(`${BACKEND_URL}/api/wakeup`)
-    .then(response => {
-      if (response.ok) {
-        removeLoadingScreen();
-        console.log("☁️ Server is awake!");
-      } else {
-        showLoadingError();
+  // --- Language Setup ---
+  const availableLanguages = [
+    { name: 'English', checked: true }, { name: 'Arabic', checked: true },
+    { name: 'Russian', checked: true }, { name: 'Dari', checked: true },
+    { name: 'Farsi', checked: true }, { name: 'Amharic', checked: true },
+    { name: 'Tigrinya', checked: true }, { name: 'Spanish', checked: false },
+    { name: 'French', checked: false }, { name: 'Turkish', checked: false },
+    { name: 'Ukrainian', checked: false }
+  ];
+
+  // Render Checkboxes
+  availableLanguages.forEach(lang => {
+    const label = document.createElement('label');
+    label.className = 'checkbox-label';
+    label.innerHTML = `
+      <input type="checkbox" value="${lang.name}" ${lang.checked ? 'checked' : ''}>
+      ${lang.name}
+    `;
+    langCheckboxes.appendChild(label);
+  });
+
+  // Toggle Dropdown
+  langMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    langDropdown.classList.toggle('hidden');
+  });
+  document.addEventListener('click', (e) => {
+    if (!langDropdown.contains(e.target) && e.target !== langMenuBtn) {
+      langDropdown.classList.add('hidden');
+    }
+  });
+
+  function getSelectedLanguages() {
+    return Array.from(langCheckboxes.querySelectorAll('input:checked')).map(cb => cb.value);
+  }
+
+  // --- Textarea Auto-Resize (No Scrollbar) ---
+  germanInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+    checkUmlautSuggestion(this.value);
+  });
+
+  // --- Smart Umlaut Suggestions ---
+  const umlautMap = {
+    'konnen': 'können', 'mussen': 'müssen', 'durfen': 'dürfen', 
+    'fur': 'für', 'uber': 'über', 'apfel': 'Äpfel', 'madchen': 'Mädchen',
+    'schon': 'schön', 'spat': 'spät', 'wahlen': 'wählen', 'ubung': 'Übung',
+    'fruh': 'früh', 'mude': 'müde', 'arzte': 'Ärzte', 'buro': 'Büro'
+  };
+
+  function checkUmlautSuggestion(val) {
+    const cleanVal = val.trim().toLowerCase();
+    if (umlautMap[cleanVal]) {
+      let suggestion = umlautMap[cleanVal];
+      // Preserve capitalization
+      if (val.trim()[0] === val.trim()[0].toUpperCase()) {
+        suggestion = suggestion.charAt(0).toUpperCase() + suggestion.slice(1);
       }
-    })
-    .catch(error => {
-      console.error("Server ping failed:", error);
-      showLoadingError();
-    });
+      suggestionText.textContent = suggestion;
+      umlautSuggestion.classList.remove('hidden');
+      umlautSuggestion.classList.add('fade-in');
+    } else {
+      umlautSuggestion.classList.add('hidden');
+    }
+  }
 
+  suggestionText.addEventListener('click', () => {
+    germanInput.value = suggestionText.textContent;
+    germanInput.style.height = 'auto'; // Reset height
+    umlautSuggestion.classList.add('hidden');
+  });
+
+  // --- Server Wakeup ---
+  createLoadingScreen();
+  fetch(`${BACKEND_URL}/api/wakeup`)
+    .then(res => res.ok ? removeLoadingScreen() : showLoadingError())
+    .catch(() => showLoadingError());
+
+  // --- Translation Logic ---
   translateBtn.addEventListener('click', async () => {
     const text = germanInput.value.trim();
-    if (!text) return;
+    const selectedLangs = getSelectedLanguages();
+    if (!text || selectedLangs.length === 0) return;
 
-    // 1. Show Shimmer Loading States
-    wordDetailsArea.style.display = 'flex';
+    wordDetailsArea.style.display = 'block';
     wordDetailsArea.classList.remove('slide-up');
     
-    // Reset details area for loading
     document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2rem; width: 50%; border-radius: 4px;"></div>';
     document.getElementById('grammarTips').innerHTML = '';
     document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
@@ -41,25 +109,22 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mainImageShimmer').style.display = 'block';
 
     translationGrid.innerHTML = '';
-    targetLanguages.forEach(() => {
+    selectedLangs.forEach(() => {
       const skeleton = document.createElement('div');
       skeleton.className = 'translation-card shimmer';
-      skeleton.innerHTML = '<div style="height: 150px;"></div>';
+      skeleton.innerHTML = '<div style="height: 100px;"></div>';
       translationGrid.appendChild(skeleton);
     });
 
     try {
-      // 2. Fetch Text Translations & Grammar
       const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: text })
+        body: JSON.stringify({ word: text, languages: selectedLangs })
       });
 
       if (!textRes.ok) throw new Error("Translation request failed");
       const data = await textRes.json();
-      
-      // 3. Render Central Description Area
       const germanData = data.german;
       
       let titleHtml = germanData.word;
@@ -67,9 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (germanData.partOfSpeech === 'noun' && germanData.article) {
           titleHtml = `<span class="article">${germanData.article}</span> ${germanData.word}`;
-          if (germanData.pluralTip) {
-              grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
-          }
+          if (germanData.pluralTip) grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
       } else if (germanData.partOfSpeech === 'verb' && germanData.conjugationTips) {
           grammarHtml = `<span class="tip-label">Conjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
       }
@@ -77,22 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('germanWordTitle').innerHTML = titleHtml;
       document.getElementById('grammarTips').innerHTML = grammarHtml;
       document.getElementById('germanExample').innerText = `"${germanData.example}"`;
-      
-      // Apply entrance animation
       wordDetailsArea.classList.add('slide-up');
 
-      // 4. Render Text Cards (No Images inside them anymore)
       translationGrid.innerHTML = ''; 
       data.translations.forEach((langData, index) => {
         const card = createTranslationCard(langData);
-        card.style.animationDelay = `${index * 0.1}s`;
+        card.style.animationDelay = `${index * 0.05}s`;
         card.classList.add('fade-in');
         translationGrid.appendChild(card);
       });
 
-      // 5. Fetch Image for Central Area
       const imgRes = await fetch(`${BACKEND_URL}/api/image?word=${encodeURIComponent(germanData.word)}`);
-      if (!imgRes.ok) throw new Error("Image request failed");
       const imgData = await imgRes.json();
 
       if (imgData.imageUrl) {
@@ -112,46 +170,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- UI RENDERER (Cleaned up, no images) ---
   function createTranslationCard(data) {
     const card = document.createElement('div');
     card.className = 'translation-card';
-    
     const isRTL = ['Arabic', 'Dari', 'Farsi'].includes(data.language);
     const textDirection = isRTL ? 'dir="rtl" style="text-align: right;"' : '';
-    const meaningsHtml = data.meanings.length > 1 
-      ? `<p class="multiple-meanings">(Also: ${data.meanings.slice(1).join(', ')})</p>` : '';
+    const meaningsHtml = data.meanings.length > 1 ? `<span class="multiple-meanings">(Also: ${data.meanings.slice(1).join(', ')})</span>` : '';
 
     card.innerHTML = `
-      <h3 class="lang-title">${data.language}</h3>
-      <div ${textDirection}>
-        <p class="translated-word">${data.meanings[0]}</p>
-        ${meaningsHtml}
+      <div class="card-header"><span class="lang-title">${data.language}</span></div>
+      <div class="card-body" ${textDirection}>
+        <p class="translated-word">${data.meanings[0]} ${meaningsHtml}</p>
         <p class="example-sentence">${data.example}</p>
       </div>
     `;
     return card;
   }
 
-  // --- LOADING SCREENS ---
   function createLoadingScreen() {
     const overlay = document.createElement('div');
     overlay.id = 'server-wakeup-overlay';
-    overlay.style.cssText = `
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(251, 253, 253, 0.95); z-index: 9999;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      font-family: 'Inter', sans-serif; color: #191c1c; text-align: center; padding: 20px;
-    `;
-    overlay.innerHTML = `
-      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-      <div style="width: 50px; height: 50px; border: 5px solid #dce4e4; border-top-color: #006a6a; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
-      <h2 style="margin: 0 0 10px 0;">Waking up the server...</h2>
-      <p style="color: #6f7979; max-width: 400px; margin: 0; line-height: 1.5;">
-        Because this app uses a free backend, the server goes to sleep when inactive. 
-        Please wait up to 50 seconds while it boots up for you.
-      </p>
-    `;
+    overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(251, 253, 253, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; color: #191c1c; text-align: center; padding: 20px;`;
+    overlay.innerHTML = `<style>@keyframes spin { to { transform: rotate(360deg); } }</style><div style="width: 50px; height: 50px; border: 5px solid #dce4e4; border-top-color: #006a6a; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div><h2 style="margin: 0 0 10px 0;">Waking up the server...</h2><p style="color: #6f7979; max-width: 400px; margin: 0; line-height: 1.5;">Please wait up to 50 seconds while it boots up for you.</p>`;
     document.body.appendChild(overlay);
   }
 
@@ -166,14 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showLoadingError() {
     const overlay = document.getElementById('server-wakeup-overlay');
-    if (overlay) {
-       overlay.innerHTML = `
-         <h2 style="color: #ba1a1a; margin: 0 0 10px 0;">Connection Failed</h2>
-         <p style="color: #6f7979; max-width: 400px; margin: 0; line-height: 1.5;">
-           Could not connect to the backend server.
-         </p>
-         <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 24px; background: #006a6a; color: white; border: none; border-radius: 20px; font-size: 1.2rem; cursor: pointer;">Try Again</button>
-       `;
-    }
+    if (overlay) overlay.innerHTML = `<h2 style="color: #ba1a1a;">Connection Failed</h2><button onclick="location.reload()" class="m3-button">Try Again</button>`;
   }
 });

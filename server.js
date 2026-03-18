@@ -8,16 +8,21 @@ app.use(express.json());
 
 const imageCache = new Map();
 
-// --- 1. HEALTH CHECK ---
 app.get('/', (req, res) => res.status(200).send("Server is running!"));
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
-// --- 2. TRANSLATION (GEMINI) ---
 app.post('/api/translate', async (req, res) => {
-    const { word } = req.body;
+    const { word, languages } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
+    
+    // Fallback if no languages are provided
+    const targetLangs = languages && languages.length > 0 ? languages : ['English'];
+    
+    // Dynamically build the expected JSON structure based on selected languages
+    const langPromptStr = targetLangs.map(l => 
+      `{"language":"${l}","meanings":["m1","m2"],"example":"Translated sentence"}`
+    ).join(',\n        ');
 
-    // UPDATED PROMPT: Request grammar details and part of speech formatting
     const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "german": {
@@ -29,13 +34,7 @@ app.post('/api/translate', async (req, res) => {
         "example": "A simple A1/A2 German example sentence."
       },
       "translations": [
-        {"language":"English","meanings":["m1","m2"],"example":"Translated sentence"},
-        {"language":"Arabic","meanings":["m1","m2"],"example":"Translated sentence"},
-        {"language":"Russian","meanings":["m1","m2"],"example":"Translated sentence"},
-        {"language":"Dari","meanings":["m1","m2"],"example":"Translated sentence"},
-        {"language":"Farsi","meanings":["m1","m2"],"example":"Translated sentence"},
-        {"language":"Amharic","meanings":["m1","m2"],"example":"Translated sentence"},
-        {"language":"Tigrinya","meanings":["m1","m2"],"example":"Translated sentence"}
+        ${langPromptStr}
       ]
     }`;
 
@@ -57,42 +56,26 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
-// --- 3. IMAGE SEARCH (UNSPLASH) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word required" });
 
     if (imageCache.has(word)) return res.json(imageCache.get(word));
 
-    const getFallback = (w) => ({
-        imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(w)}`,
-        photographer: null,
-        photographerLink: null,
-        downloadLocation: null
-    });
+    const getFallback = (w) => ({ imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(w)}` });
 
-    if (!process.env.UNSPLASH_ACCESS_KEY) {
-        console.warn("⚠️ UNSPLASH_ACCESS_KEY is missing. Using placeholder.");
-        return res.json(getFallback(word));
-    }
+    if (!process.env.UNSPLASH_ACCESS_KEY) return res.json(getFallback(word));
 
     try {
         const response = await fetch(
             `https://api.unsplash.com/search/photos?query=${encodeURIComponent(word)}&per_page=1`,
             { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
         );
-
         if (!response.ok) throw new Error("Unsplash API Error");
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
-            const photo = data.results[0];
-            const imageData = {
-                imageUrl: photo.urls.small,
-                photographer: photo.user.name,
-                photographerLink: photo.user.links.html,
-                downloadLocation: photo.links.download_location
-            };
+            const imageData = { imageUrl: data.results[0].urls.small };
             imageCache.set(word, imageData);
             return res.json(imageData);
         } else {

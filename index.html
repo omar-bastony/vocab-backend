@@ -4,30 +4,49 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>A1-A2 Contextual Translator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="app-container">
-    <header class="fade-in">
+    <header class="top-header fade-in">
+      <div class="lang-menu-wrapper">
+        <button id="langMenuBtn" class="lang-toggle-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          Languages
+        </button>
+        <div id="langDropdown" class="lang-dropdown hidden">
+          <div id="langCheckboxes" class="lang-checkbox-grid">
+             </div>
+        </div>
+      </div>
     </header>
 
-    <section class="input-section fade-in">
-      <div class="m3-textfield">
-        <textarea id="germanInput" placeholder=" " rows="2"></textarea>
-        <label for="germanInput">German word</label>
-      </div>
-      <button id="translateBtn" class="m3-button">Translate</button>
+    <section class="central-box fade-in">
+      <div class="central-left">
+        <div class="input-group">
+          <div class="m3-textfield">
+            <textarea id="germanInput" placeholder=" " rows="1"></textarea>
+            <label for="germanInput">German word</label>
+          </div>
+          <button id="translateBtn" class="m3-button">Translate</button>
+        </div>
+        
+        <div id="umlautSuggestion" class="umlaut-suggestion hidden">
+          Did you mean: <span id="suggestionText" class="suggestion-chip"></span>?
+        </div>
 
-      <div id="wordDetailsArea" class="word-details" style="display: none;">
-        <div class="word-info">
+        <div id="wordDetailsArea" class="word-details-inner" style="display: none;">
           <h2 id="germanWordTitle" class="main-word"></h2>
           <div id="grammarTips" class="grammar-tips"></div>
           <p id="germanExample" class="german-example"></p>
         </div>
+      </div>
+
+      <div class="central-right">
         <div class="central-image-container">
-           <div id="mainImageShimmer" class="image-shimmer shimmer"></div>
-           <img id="centralImage" class="dynamic-image" src="" alt="Visual Context">
+           <div id="mainImageShimmer" class="image-shimmer shimmer" style="display: none;"></div>
+           <img id="centralImage" class="dynamic-image" src="https://placehold.co/600x400/e0f2f1/006a6a?text=Translation+Visual" alt="Visual Context">
         </div>
       </div>
     </section>
