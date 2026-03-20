@@ -166,25 +166,30 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal("Lesetexte (A1/A2)", html, true);
   }
 
-  // Generate AI Text
+// Generate AI Text
   generateAiBtn.addEventListener('click', async () => {
     generateAiBtn.disabled = true;
-    generateAiBtn.innerHTML = "Generiere Text...";
+    generateAiBtn.innerHTML = "Generiere Texte..."; // Updated text to plural
     
     try {
       const res = await fetch(`${BACKEND_URL}/api/generate-reading`);
       if (res.ok) {
         const data = await res.json();
-        // Save to local storage
-        localStorage.setItem('savedPassages', JSON.stringify([{ title: data.title, text: data.text }]));
-        renderReadingPassages(); // Re-render window
+        
+        // UPDATE 2: Save the whole array of stories to local storage
+        if (data.stories && Array.isArray(data.stories)) {
+            localStorage.setItem('savedPassages', JSON.stringify(data.stories));
+            renderReadingPassages(); // Re-render window with the 3 new stories
+        } else {
+            throw new Error("Invalid data format received from AI");
+        }
       }
     } catch (e) {
       console.error("AI Generation failed", e);
       alert("Fehler beim Generieren. Bitte stellen Sie sicher, dass das Backend erreichbar ist.");
     } finally {
       generateAiBtn.disabled = false;
-      generateAiBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="margin-right: 8px;"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="M4.93 19.07l2.83-2.83"></path><path d="M16.24 7.76l2.83-2.83"></path></svg> Neuen Text generieren (KI)`;
+      generateAiBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="margin-right: 8px;"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="M4.93 19.07l2.83-2.83"></path><path d="M16.24 7.76l2.83-2.83"></path></svg> Neue Texte generieren (KI)`;
     }
   });
 

@@ -124,14 +124,29 @@ app.post('/api/translate', async (req, res) => {
 // --- AI STORY GENERATOR ROUTE (Powered by Groq) ---
 app.get('/api/generate-reading', async (req, res) => {
     try {
-        const promptText = `Schreibe einen kurzen, interessanten Lesetext (Niveau A1-A2) auf Deutsch.
-        Themen: Alltag, Urlaub, Einkaufen oder Hobbys.
-        WICHTIG: Antworte NUR mit einem gültigen JSON-Objekt.
+        // UPDATE 1: Ask for 3 texts and define the JSON array structure
+        const promptText = `Schreibe DREI kurze, interessante Lesetexte (Niveau A1-A2) auf Deutsch.
+        Themen: Alltag, Urlaub, Einkaufen oder Hobbys (jeder Text ein anderes Thema).
+        WICHTIG: Antworte NUR mit einem gültigen JSON-Objekt, das ein Array namens "stories" enthält.
         Format:
         {
-          "title": "Titel des Textes",
-          "fokus": "Fokus: [Grammatik oder Vokabel Thema]",
-          "text": "Der deutsche Text (ca. 5-7 Sätze)..."
+          "stories": [
+            {
+              "title": "Titel des Textes 1",
+              "fokus": "Fokus: [Grammatik oder Vokabel Thema]",
+              "text": "Der deutsche Text 1 (ca. 5-7 Sätze)..."
+            },
+            {
+              "title": "Titel des Textes 2",
+              "fokus": "...",
+              "text": "..."
+            },
+            {
+              "title": "Titel des Textes 3",
+              "fokus": "...",
+              "text": "..."
+            }
+          ]
         }`;
 
         const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -147,8 +162,8 @@ app.get('/api/generate-reading', async (req, res) => {
                     { role: "system", content: "Du bist ein hilfreicher Deutschlehrer. Output ONLY valid JSON." },
                     { role: "user", content: promptText }
                 ],
-                response_format: { type: "json_object" }, // Guarantees JSON output
-                temperature: 0.7 // A slightly higher temperature to make the stories creative
+                response_format: { type: "json_object" }, 
+                temperature: 0.7 
             })
         });
 
@@ -160,7 +175,7 @@ app.get('/api/generate-reading', async (req, res) => {
         const rawText = data.choices[0].message.content.trim();
         const jsonResult = JSON.parse(rawText);
 
-        res.json(jsonResult);
+        res.json(jsonResult); // This now returns { stories: [ {title, fokus, text}, ... ] }
     } catch (error) {
         console.error("Groq Passage generation failed:", error);
         res.status(500).json({ error: "Failed to generate reading passage" });
