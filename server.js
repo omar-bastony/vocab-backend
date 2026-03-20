@@ -124,10 +124,24 @@ app.post('/api/translate', async (req, res) => {
 // --- AI STORY GENERATOR ROUTE (Powered by Groq) ---
 app.get('/api/generate-reading', async (req, res) => {
     try {
-        // UPDATE 1: Ask for 3 texts and define the JSON array structure
-        const promptText = `Schreibe DREI kurze, interessante Lesetexte (Niveau A1-A2) auf Deutsch.
-        Themen: Alltag, Urlaub, Einkaufen oder Hobbys (jeder Text ein anderes Thema).
-        WICHTIG: Antworte NUR mit einem gültigen JSON-Objekt, das ein Array namens "stories" enthält.
+        // UPDATE 1: Ein viel ausführlicherer Prompt mit Fokus auf extreme Variation und Kreativität
+        const promptText = `Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
+        
+        WICHTIG: Erfinde jedes Mal komplett NEUE Geschichten! Wähle für jeden Text ein anderes, zufälliges Thema aus dieser riesigen Auswahl (oder erfinde eigene verrückte Themen): 
+        - Verrückte Haustiere oder sprechende Tiere
+        - Lustige Missgeschicke im Alltag
+        - Eine Reise in die Zukunft oder Zeitreisen
+        - Mysteriöse Entdeckungen im Wald oder auf dem Dachboden
+        - Ungewöhnliche Berufe (z.B. UFO-Forscher, Schokoladentester)
+        - Überleben in der Natur
+        - Kochen von magischen oder exotischen Gerichten
+        - Ein Leben auf einem anderen Planeten
+        - Spannende Kriminalfälle für Anfänger
+        - Geistergeschichten oder lustige Monster
+        
+        Vermeide langweilige Standard-Texte. Die Texte sollen humorvoll, spannend oder überraschend sein (ca. 5-7 Sätze pro Text).
+        
+        Antworte NUR mit einem gültigen JSON-Objekt, das ein Array namens "stories" enthält.
         Format:
         {
           "stories": [
@@ -159,11 +173,14 @@ app.get('/api/generate-reading', async (req, res) => {
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [
-                    { role: "system", content: "Du bist ein hilfreicher Deutschlehrer. Output ONLY valid JSON." },
+                    // System-Message angepasst, um Wiederholungen zu verbieten
+                    { role: "system", content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal." },
                     { role: "user", content: promptText }
                 ],
                 response_format: { type: "json_object" }, 
-                temperature: 0.7 
+                // UPDATE 2: Die Temperature von 0.7 auf 0.9 erhöht. 
+                // Das macht die KI experimentierfreudiger und zufälliger!
+                temperature: 0.9 
             })
         });
 
@@ -175,7 +192,7 @@ app.get('/api/generate-reading', async (req, res) => {
         const rawText = data.choices[0].message.content.trim();
         const jsonResult = JSON.parse(rawText);
 
-        res.json(jsonResult); // This now returns { stories: [ {title, fokus, text}, ... ] }
+        res.json(jsonResult);
     } catch (error) {
         console.error("Groq Passage generation failed:", error);
         res.status(500).json({ error: "Failed to generate reading passage" });
