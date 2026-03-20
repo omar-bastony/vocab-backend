@@ -1,12 +1,30 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Define __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-const path = require('path');
+
+// Serve the frontend files
 app.use(express.static(__dirname));
+
+const imageCache = new Map();
+const translationCache = new Map();
+
+// Send index.html when people visit the main link
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
+
 
 const imageCache = new Map();
 const translationCache = new Map();
