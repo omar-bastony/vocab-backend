@@ -278,3 +278,30 @@ body {
   .modal-title { font-size: 1.5rem; }
   .main-word { font-size: 1.8rem; }
 }
+
+/* --- Modal Actions & Reading Texts --- */
+.modal-actions {
+  display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;
+  border-top: 1px solid var(--theme-border-light); padding-top: 1rem;
+}
+.secondary-btn {
+  background-color: transparent; color: var(--theme-primary); border: 2px solid var(--theme-primary);
+}
+.secondary-btn:hover {
+  background-color: var(--theme-box-bg); color: var(--theme-primary-hover);
+}
+.reading-passage {
+  background: var(--theme-light-hover); padding: 1.5rem;
+  border-left: 4px solid var(--theme-primary); border-radius: 0 8px 8px 0;
+  font-size: 1.15rem; line-height: 1.8; color: #222; margin-bottom: 1.5rem;
+}
+
+/* --- PRINTING STYLES --- */
+@media print {
+  body * { visibility: hidden; }
+  #printableArea, #printableArea * { visibility: visible; }
+  #printableArea { position: absolute; left: 0; top: 0; width: 100%; color: black !important; }
+  .modal-content { border: none; box-shadow: none; background: white !important; transform: none !important; }
+  .grammar-table th { background-color: #f0f0f0 !important; color: black !important; border: 1px solid #ccc; }
+  .grammar-table td { border: 1px solid #ccc; }
+}

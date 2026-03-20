@@ -121,6 +121,24 @@ const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON ob
     }
 });
 
+app.get('/api/generate-reading', async (req, res) => {
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const prompt = `Write a short reading passage in German appropriate for A1-A2 language learners. Focus on daily life topics (e.g., hobbies, shopping, weather). Return ONLY a JSON object with this structure: { "title": "German Title", "text": "The German text paragraph" }`;
+        
+        const result = await model.generateContent(prompt);
+        let rawText = result.response.text().trim();
+        rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+        
+        const jsonResult = JSON.parse(rawText);
+        res.json(jsonResult);
+    } catch (error) {
+        console.error("Passage generation failed:", error);
+        res.status(500).json({ error: "Failed to generate reading passage" });
+    }
+});
+
 // --- IMAGE ROUTE (Unsplash - Unchanged) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;

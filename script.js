@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const grammarMenuBtn = document.getElementById('grammarMenuBtn');
   const grammarDropdown = document.getElementById('grammarDropdown');
 
+  const materialMenuBtn = document.getElementById('materialMenuBtn');
+  const materialDropdown = document.getElementById('materialDropdown');
+
   // Spelling & Audio
   const umlautSuggestion = document.getElementById('umlautSuggestion');
   const suggestionText = document.getElementById('suggestionText');
@@ -25,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeModalBtn = document.getElementById('closeModalBtn');
   const modalTitle = document.getElementById('modalTitle');
   const modalBody = document.getElementById('modalBody');
+  const modalActions = document.getElementById('modalActions');
+  const printBtn = document.getElementById('printBtn');
+  const generateAiBtn = document.getElementById('generateAiBtn');
 
   // ==========================================
   // --- A1 & A2 GERMAN GRAMMAR LIBRARY ---
@@ -35,178 +41,57 @@ document.addEventListener('DOMContentLoaded', () => {
       body: `
         <p>Die wichtigsten Verben und Begleiter auf Deutsch. Die Verben <strong>sein</strong> und <strong>haben</strong> sind unregelmäßig.</p>
         <table class="grammar-table">
-          <thead>
-            <tr>
-              <th>Pronomen</th>
-              <th>sein (to be)</th>
-              <th>haben (to have)</th>
-              <th>Possessiv (my, your...)</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Pronomen</th><th>sein</th><th>haben</th><th>Possessiv</th></tr></thead>
           <tbody>
-            <tr><td><strong>ich</strong></td><td>bin</td><td>habe</td><td>mein / meine</td></tr>
-            <tr><td><strong>du</strong></td><td>bist</td><td>hast</td><td>dein / deine</td></tr>
-            <tr><td><strong>er/sie/es</strong></td><td>ist</td><td>hat</td><td>sein / ihr / sein</td></tr>
-            <tr><td><strong>wir</strong></td><td>sind</td><td>haben</td><td>unser / unsere</td></tr>
-            <tr><td><strong>ihr</strong></td><td>seid</td><td>habt</td><td>euer / eure</td></tr>
-            <tr><td><strong>sie/Sie</strong></td><td>sind</td><td>haben</td><td>ihr / Ihr</td></tr>
+            <tr><td>ich</td><td>bin</td><td>habe</td><td>mein</td></tr>
+            <tr><td>du</td><td>bist</td><td>hast</td><td>dein</td></tr>
+            <tr><td>er/sie/es</td><td>ist</td><td>hat</td><td>sein / ihr / sein</td></tr>
+            <tr><td>wir</td><td>sind</td><td>haben</td><td>unser</td></tr>
+            <tr><td>ihr</td><td>seid</td><td>habt</td><td>euer</td></tr>
+            <tr><td>sie/Sie</td><td>sind</td><td>haben</td><td>ihr / Ihr</td></tr>
           </tbody>
         </table>
-        <p><em>Beispiel:</em> <span class="grammar-highlight">Ich bin</span> müde, aber <span class="grammar-highlight">ich habe</span> mein Buch.</p>
       `
     },
     kasus: {
       title: "Artikel & Kasus (Fälle)",
       body: `
-        <p>Der Artikel ändert sich, je nachdem welche Funktion das Nomen im Satz hat.</p>
-        <ul>
-          <li><strong>Nominativ:</strong> Das Subjekt. <em>(Wer oder was?)</em></li>
-          <li><strong>Akkusativ:</strong> Das direkte Objekt. <em>(Wen oder was?)</em></li>
-          <li><strong>Dativ:</strong> Das indirekte Objekt. <em>(Wem?)</em></li>
-        </ul>
         <table class="grammar-table">
-          <thead>
-            <tr>
-              <th>Kasus</th>
-              <th>Maskulin (der)</th>
-              <th>Feminin (die)</th>
-              <th>Neutral (das)</th>
-              <th>Plural (die)</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Kasus</th><th>Maskulin (der)</th><th>Feminin (die)</th><th>Neutral (das)</th><th>Plural (die)</th></tr></thead>
           <tbody>
-            <tr><td><strong>Nominativ</strong></td><td>der</td><td>die</td><td>das</td><td>die</td></tr>
-            <tr><td><strong>Akkusativ</strong></td><td><span class="grammar-highlight">den</span></td><td>die</td><td>das</td><td>die</td></tr>
-            <tr><td><strong>Dativ</strong></td><td><span class="grammar-highlight">dem</span></td><td><span class="grammar-highlight">der</span></td><td><span class="grammar-highlight">dem</span></td><td><span class="grammar-highlight">den (+n)</span></td></tr>
+            <tr><td>Nominativ</td><td>der</td><td>die</td><td>das</td><td>die</td></tr>
+            <tr><td>Akkusativ</td><td><span class="grammar-highlight">den</span></td><td>die</td><td>das</td><td>die</td></tr>
+            <tr><td>Dativ</td><td><span class="grammar-highlight">dem</span></td><td><span class="grammar-highlight">der</span></td><td><span class="grammar-highlight">dem</span></td><td><span class="grammar-highlight">den (+n)</span></td></tr>
           </tbody>
         </table>
-        <p><em>Beispiel:</em> <span class="grammar-highlight">Der Mann</span> (Nom) gibt <span class="grammar-highlight">dem Kind</span> (Dat) <span class="grammar-highlight">den Apfel</span> (Akk).</p>
       `
     },
     fragen: {
       title: "Fragen stellen",
       body: `
-        <p>Es gibt zwei Hauptarten von Fragen auf Deutsch:</p>
-        <p><strong>1. W-Fragen (Information)</strong><br>
-        Das Fragewort steht auf Position 1, das Verb auf Position 2.</p>
-        <ul>
-          <li><strong>Wer?</strong> (Person): <em>Wer ist das?</em></li>
-          <li><strong>Was?</strong> (Sache): <em>Was machst du?</em></li>
-          <li><strong>Wo? / Wohin?</strong> (Ort): <em>Wo wohnst du? Wohin gehst du?</em></li>
-          <li><strong>Wann?</strong> (Zeit): <em>Wann kommt der Zug?</em></li>
-        </ul>
-        <p><strong>2. Ja/Nein-Fragen</strong><br>
-        Das Verb steht auf Position 1!</p>
-        <ul>
-          <li><em><span class="grammar-highlight">Lernst</span> du Deutsch?</em> – Ja, ich lerne Deutsch.</li>
-          <li><em><span class="grammar-highlight">Hast</span> du Zeit?</em> – Nein, leider nicht.</li>
-        </ul>
+        <p><strong>1. W-Fragen:</strong> Wer? Was? Wo? Wann? <em>(Fragewort auf Position 1)</em></p>
+        <p><strong>2. Ja/Nein-Fragen:</strong> <em>(Verb auf Position 1)</em> "Lernst du Deutsch?"</p>
       `
     },
     perfekt: {
-      title: "Das Perfekt (Vergangenheit)",
-      body: `
-        <p>Wir benutzen das Perfekt für die Vergangenheit, besonders wenn wir sprechen.</p>
-        <p><strong>Die Regel:</strong> <span class="grammar-highlight">haben</span> oder <span class="grammar-highlight">sein</span> (Position 2) + <strong>Partizip II</strong> (am Ende des Satzes).</p>
-        <p>Wann benutzt man <strong>sein</strong>?</p>
-        <ul>
-          <li>Bei Bewegung von A nach B: <em>gehen, fahren, fliegen, kommen.</em></li>
-          <li>Bei Zustandsänderung: <em>aufwachen, einschlafen, sterben.</em></li>
-          <li>Ausnahmen: <em>sein, bleiben, passieren.</em></li>
-        </ul>
-        <p><strong>Beispiele:</strong></p>
-        <ul>
-          <li>(haben): <em>Ich <span class="grammar-highlight">habe</span> gestern eine Pizza <span class="grammar-highlight">gegessen</span>.</em></li>
-          <li>(sein): <em>Wir <span class="grammar-highlight">sind</span> am Wochenende nach Berlin <span class="grammar-highlight">gefahren</span>.</em></li>
-        </ul>
-      `
+      title: "Das Perfekt",
+      body: `<p><strong>Regel:</strong> haben/sein (Pos 2) + Partizip II (Ende).</p>`
     },
     praeteritum: {
-      title: "Das Präteritum (Vergangenheit)",
-      body: `
-        <p>Das Präteritum wird oft in Texten (Büchern, Zeitungen) benutzt. Im A2-Niveau ist es besonders wichtig für <strong>haben</strong>, <strong>sein</strong> und die <strong>Modalverben</strong>.</p>
-        <table class="grammar-table">
-          <thead>
-            <tr>
-              <th>Pronomen</th>
-              <th>sein (war)</th>
-              <th>haben (hatte)</th>
-              <th>müssen (musste)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td><strong>ich</strong></td><td>war</td><td>hatte</td><td>musste</td></tr>
-            <tr><td><strong>du</strong></td><td>warst</td><td>hattest</td><td>musstest</td></tr>
-            <tr><td><strong>er/sie/es</strong></td><td>war</td><td>hatte</td><td>musste</td></tr>
-            <tr><td><strong>wir</strong></td><td>waren</td><td>hatten</td><td>mussten</td></tr>
-          </tbody>
-        </table>
-        <p><strong>Beispiele:</strong></p>
-        <ul>
-          <li><em>Ich <span class="grammar-highlight">war</span> gestern krank.</em></li>
-          <li><em>Als Kind <span class="grammar-highlight">hatte</span> ich einen Hund.</em></li>
-          <li><em>Er <span class="grammar-highlight">musste</span> lange arbeiten.</em></li>
-        </ul>
-      `
+      title: "Das Präteritum",
+      body: `<p>Wichtig für A2: sein (war), haben (hatte), und Modalverben (musste, wollte...).</p>`
     },
     nebensaetze: {
-      title: "Nebensätze (dass, weil, wenn)",
-      body: `
-        <p>In einem Nebensatz steht das konjugierte Verb <strong>immer ganz am Ende</strong>.</p>
-        <ul>
-          <li><strong>weil (Grund/Warum?):</strong><br> 
-          <em>Ich lerne Deutsch, <span class="grammar-highlight">weil</span> ich in Deutschland leben <span class="grammar-highlight">möchte</span>.</em></li>
-          <li><strong>dass (Information):</strong><br> 
-          <em>Ich glaube, <span class="grammar-highlight">dass</span> die deutsche Grammatik schwer <span class="grammar-highlight">ist</span>.</em></li>
-          <li><strong>wenn (Bedingung):</strong><br> 
-          <em><span class="grammar-highlight">Wenn</span> das Wetter schön <span class="grammar-highlight">ist</span>, gehe ich spazieren.</em></li>
-        </ul>
-        <p><em>Wichtig:</em> Wenn der Satz mit dem Nebensatz beginnt (wie bei "wenn"), steht das Verb des Hauptsatzes direkt danach auf Position 1! (<em>...ist, <strong>gehe</strong> ich...</em>)</p>
-      `
+      title: "Nebensätze",
+      body: `<p>Bei "weil", "dass" und "wenn" steht das Verb am <strong>Ende</strong>!</p>`
     },
     wechselpraep: {
       title: "Wechselpräpositionen",
-      body: `
-        <p>Diese Präpositionen können mit Dativ oder Akkusativ stehen: <br>
-        <strong>in, an, auf, neben, hinter, über, unter, vor, zwischen</strong>.</p>
-        <p><strong>1. Akkusativ (Wohin?) – Bewegung/Aktion</strong></p>
-        <ul>
-          <li>Aktion: Ich bewege etwas von A nach B.</li>
-          <li><em>Ich stelle die Tasse <span class="grammar-highlight">auf den</span> Tisch.</em></li>
-        </ul>
-        <p><strong>2. Dativ (Wo?) – Position/Stillstand</strong></p>
-        <ul>
-          <li>Position: Etwas ist schon dort, es bewegt sich nicht.</li>
-          <li><em>Die Tasse steht <span class="grammar-highlight">auf dem</span> Tisch.</em></li>
-        </ul>
-      `
+      body: `<p>Akkusativ (Wohin? - Bewegung) vs. Dativ (Wo? - Position).</p>`
     },
     komparativ: {
       title: "Komparativ & Superlativ",
-      body: `
-        <p>Wir benutzen dies, um Dinge oder Personen zu vergleichen.</p>
-        <table class="grammar-table">
-          <thead>
-            <tr>
-              <th>Grundform</th>
-              <th>Komparativ (+er)</th>
-              <th>Superlativ (am ...-sten)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>schnell</td><td>schnell<span class="grammar-highlight">er</span></td><td><span class="grammar-highlight">am</span> schnell<span class="grammar-highlight">sten</span></td></tr>
-            <tr><td>alt (Umlaut)</td><td><span class="grammar-highlight">ä</span>lt<span class="grammar-highlight">er</span></td><td><span class="grammar-highlight">am ä</span>lte<span class="grammar-highlight">sten</span></td></tr>
-            <tr><td>gut (Irregulär)</td><td><span class="grammar-highlight">besser</span></td><td><span class="grammar-highlight">am besten</span></td></tr>
-            <tr><td>viel (Irregulär)</td><td><span class="grammar-highlight">mehr</span></td><td><span class="grammar-highlight">am meisten</span></td></tr>
-          </tbody>
-        </table>
-        <p><strong>Beispiele:</strong></p>
-        <ul>
-          <li>Gleich: <em>Maria ist so groß <span class="grammar-highlight">wie</span> Anna.</em></li>
-          <li>Unterschied: <em>Peter ist größ<span class="grammar-highlight">er als</span> Maria.</em></li>
-          <li>Höchste Stufe: <em>Tom ist <span class="grammar-highlight">am größten</span>.</em></li>
-        </ul>
-      `
+      body: `<p>schnell -> schneller -> am schnellsten.</p>`
     }
   };
 
@@ -243,59 +128,115 @@ document.addEventListener('DOMContentLoaded', () => {
     langCheckboxes.appendChild(label);
   });
 
-  // --- Dropdown Toggle Logic ---
-  langMenuBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    langDropdown.classList.toggle('hidden');
-    grammarDropdown.classList.add('hidden'); // Close the other
-  });
+  // --- Dropdowns Logic ---
+  function closeAllDropdowns() {
+    langDropdown.classList.add('hidden');
+    grammarDropdown.classList.add('hidden');
+    materialDropdown.classList.add('hidden');
+  }
 
-  grammarMenuBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    grammarDropdown.classList.toggle('hidden');
-    langDropdown.classList.add('hidden'); // Close the other
-  });
+  langMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); const isHidden = langDropdown.classList.contains('hidden'); closeAllDropdowns(); if (isHidden) langDropdown.classList.remove('hidden'); });
+  grammarMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); const isHidden = grammarDropdown.classList.contains('hidden'); closeAllDropdowns(); if (isHidden) grammarDropdown.classList.remove('hidden'); });
+  materialMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); const isHidden = materialDropdown.classList.contains('hidden'); closeAllDropdowns(); if (isHidden) materialDropdown.classList.remove('hidden'); });
   
-  // Close dropdowns when clicking outside
   document.addEventListener('click', (e) => {
-    if (!langDropdown.contains(e.target) && e.target !== langMenuBtn) {
-      langDropdown.classList.add('hidden');
-    }
-    if (!grammarDropdown.contains(e.target) && e.target !== grammarMenuBtn) {
-      grammarDropdown.classList.add('hidden');
-    }
+    if (!e.target.closest('.dropdown-wrapper')) closeAllDropdowns();
   });
 
-  // --- Grammar Modal Logic ---
-  const grammarItems = document.querySelectorAll('.grammar-item');
-  grammarItems.forEach(item => {
+  // --- Open Modals Logic ---
+  function openModal(title, htmlBody, showGenerateBtn = false) {
+    modalTitle.innerText = title;
+    modalBody.innerHTML = htmlBody;
+    modalActions.classList.remove('hidden');
+    generateAiBtn.classList.toggle('hidden', !showGenerateBtn);
+    
+    grammarModal.classList.remove('hidden');
+    setTimeout(() => grammarModal.classList.add('active'), 10);
+  }
+
+  // Grammar Clicks
+  document.querySelectorAll('.grammar-item:not(.material-btn)').forEach(item => {
     item.addEventListener('click', (e) => {
       const topicKey = e.target.getAttribute('data-topic');
       const content = grammarContent[topicKey];
-      
-      if (content) {
-        modalTitle.innerText = content.title;
-        modalBody.innerHTML = content.body;
-        grammarModal.classList.remove('hidden');
-        setTimeout(() => grammarModal.classList.add('active'), 10);
-      }
-      grammarDropdown.classList.add('hidden');
+      if (content) openModal(content.title, content.body, false);
+      closeAllDropdowns();
     });
   });
 
+  // Materials Clicks (Vocab & Reading)
+  document.querySelectorAll('.material-btn').forEach(item => {
+    item.addEventListener('click', (e) => {
+      const type = e.target.getAttribute('data-type');
+      closeAllDropdowns();
+
+      if (type === 'lesetexte') {
+        renderReadingPassages();
+      } else {
+        const data = materialData[type];
+        let html = `<p>${data.description}</p><table class="grammar-table"><thead><tr>`;
+        data.headers.forEach(h => html += `<th>${h}</th>`);
+        html += `</tr></thead><tbody>`;
+        
+        data.items.forEach(row => {
+          html += `<tr>`;
+          Object.values(row).forEach(val => html += `<td>${val}</td>`);
+          html += `</tr>`;
+        });
+        html += `</tbody></table>`;
+        openModal(data.title, html, false);
+      }
+    });
+  });
+
+  // --- Reading Passages Logic & Local Storage ---
+  function renderReadingPassages() {
+    let savedTexts = JSON.parse(localStorage.getItem('savedPassages'));
+    if (!savedTexts || savedTexts.length === 0) {
+        savedTexts = materialData.lesetexte; // Load default from data.js
+    }
+    
+    let html = '';
+    savedTexts.forEach(item => {
+        html += `<h3>${item.title}</h3><div class="reading-passage">${item.text}</div>`;
+    });
+    
+    openModal("Lesetexte (A1/A2)", html, true);
+  }
+
+  // Generate AI Text
+  generateAiBtn.addEventListener('click', async () => {
+    generateAiBtn.disabled = true;
+    generateAiBtn.innerHTML = "Generiere Text...";
+    
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/generate-reading`);
+      if (res.ok) {
+        const data = await res.json();
+        // Save to local storage
+        localStorage.setItem('savedPassages', JSON.stringify([{ title: data.title, text: data.text }]));
+        renderReadingPassages(); // Re-render window
+      }
+    } catch (e) {
+      console.error("AI Generation failed", e);
+      alert("Fehler beim Generieren. Bitte stellen Sie sicher, dass das Backend erreichbar ist.");
+    } finally {
+      generateAiBtn.disabled = false;
+      generateAiBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="margin-right: 8px;"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="M4.93 19.07l2.83-2.83"></path><path d="M16.24 7.76l2.83-2.83"></path></svg> Neuen Text generieren (KI)`;
+    }
+  });
+
+  // Print Logic
+  printBtn.addEventListener('click', () => { window.print(); });
+
   function closeGrammarModal() {
     grammarModal.classList.remove('active');
-    setTimeout(() => grammarModal.classList.add('hidden'), 300); // Wait for transition
+    setTimeout(() => { grammarModal.classList.add('hidden'); modalActions.classList.add('hidden'); }, 300);
   }
 
   closeModalBtn.addEventListener('click', closeGrammarModal);
-  grammarModal.addEventListener('click', (e) => {
-    if (e.target === grammarModal) closeGrammarModal(); // Close if clicking outside the white box
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeGrammarModal();
-  });
-
+  grammarModal.addEventListener('click', (e) => { if (e.target === grammarModal) closeGrammarModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGrammarModal(); });
 
   function getSelectedLanguages() {
     return Array.from(langCheckboxes.querySelectorAll('input:checked')).map(cb => cb.value);
@@ -325,11 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function checkWordSuggestionAI(val) {
       try {
-          const res = await fetch(`${BACKEND_URL}/api/spellcheck`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ word: val })
-          });
+          const res = await fetch(`${BACKEND_URL}/api/spellcheck`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: val }) });
           if (!res.ok) return;
           const data = await res.json();
           if (data.corrected && data.corrected !== val) {
@@ -337,17 +274,14 @@ document.addEventListener('DOMContentLoaded', () => {
               umlautSuggestion.classList.remove('hidden');
               umlautSuggestion.classList.add('fade-in');
           }
-      } catch (err) {
-          console.error("AI Spellcheck failed", err);
-      }
+      } catch (err) {}
   }
 
-  // FIXED: Now triggers the translation search immediately!
   suggestionText.addEventListener('click', () => {
     germanInput.value = suggestionText.textContent;
     germanInput.style.height = 'auto'; 
     umlautSuggestion.classList.add('hidden');
-    translateBtn.click(); // Trigger search!
+    translateBtn.click(); 
   });
 
   // --- Translation Logic ---
@@ -356,40 +290,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedLangs = getSelectedLanguages();
     if (!text || selectedLangs.length === 0) return;
     
-    translateBtn.disabled = true;
-    translateBtn.style.opacity = '0.6';
-    germanSpeakBtn.classList.add('hidden'); 
-
-    wordDetailsArea.style.display = 'block';
-    wordDetailsArea.classList.remove('slide-up');
+    translateBtn.disabled = true; translateBtn.style.opacity = '0.6'; germanSpeakBtn.classList.add('hidden'); 
+    wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
     
     document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2.2rem; width: 50%; border-radius: 4px;"></div>';
     document.getElementById('grammarTips').innerHTML = '';
     document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
-    
     document.getElementById('centralImage').style.display = 'none';
     document.getElementById('mainImageShimmer').style.display = 'block';
 
     translationGrid.innerHTML = '';
     selectedLangs.forEach(() => {
       const skeleton = document.createElement('div');
-      skeleton.className = 'translation-card shimmer';
-      skeleton.innerHTML = '<div style="height: 100px;"></div>';
+      skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
       translationGrid.appendChild(skeleton);
     });
 
     try {
       const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: text, languages: selectedLangs })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: text, languages: selectedLangs })
       });
 
       if (!textRes.ok) throw new Error("Translation request failed");
       const data = await textRes.json();
       const germanData = data.german;
       
-      // Dynamic Theme Switching based on Article
       document.body.classList.remove('theme-der', 'theme-die', 'theme-das'); 
       if (germanData.partOfSpeech === 'noun' && germanData.article) {
           const article = germanData.article.toLowerCase();
@@ -430,28 +355,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const imgData = await imgRes.json();
 
       if (imgData.imageUrl) {
-          const img = document.getElementById('centralImage');
-          const shimmer = document.getElementById('mainImageShimmer');
+          const img = document.getElementById('centralImage'); const shimmer = document.getElementById('mainImageShimmer');
           img.src = imgData.imageUrl;
-          img.onload = () => {
-            img.style.display = 'block';
-            img.classList.add('fade-in');
-            shimmer.style.display = 'none'; 
-          };
+          img.onload = () => { img.style.display = 'block'; img.classList.add('fade-in'); shimmer.style.display = 'none'; };
       }
-
     } catch (error) {
-      console.error("Error:", error);
-      translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen. Bitte überprüfen Sie die Konsole.</p>`;
+      translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;
     } finally {
-      translateBtn.disabled = false;
-      translateBtn.style.opacity = '1';
+      translateBtn.disabled = false; translateBtn.style.opacity = '1';
     }
   });
 
   function createTranslationCard(data) {
-    const card = document.createElement('div');
-    card.className = 'translation-card';
+    const card = document.createElement('div'); card.className = 'translation-card';
     const isRTL = ['Arabic', 'Dari', 'Farsi'].includes(data.language);
     const textDirection = isRTL ? 'dir="rtl" style="text-align: right;"' : '';
     const meaningsHtml = data.meanings.length > 1 ? `<span class="multiple-meanings">(Auch: ${data.meanings.slice(1).join(', ')})</span>` : '';
@@ -463,16 +379,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="card-body" ${textDirection}>
         <div class="word-row">
           <p class="translated-word">${translatedWord} ${meaningsHtml}</p>
-          <button class="speak-btn card-speak-btn" aria-label="Aussprache anhören" title="Aussprache anhören">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
-          </button>
+          <button class="speak-btn card-speak-btn" aria-label="Aussprache anhören"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
         </div>
         <p class="example-sentence">${data.example}</p>
-      </div>
-    `;
-
-    const speakBtn = card.querySelector('.card-speak-btn');
-    speakBtn.addEventListener('click', () => playAudio(translatedWord, ttsCode));
+      </div>`;
+    card.querySelector('.card-speak-btn').addEventListener('click', () => playAudio(translatedWord, ttsCode));
     return card;
   }
 });
