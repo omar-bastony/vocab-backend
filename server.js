@@ -15,16 +15,6 @@ app.use(express.json());
 // Serve the frontend files
 app.use(express.static(__dirname));
 
-const imageCache = new Map();
-const translationCache = new Map();
-
-// Send index.html when people visit the main link
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
-
 
 const imageCache = new Map();
 const translationCache = new Map();
