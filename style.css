@@ -296,12 +296,53 @@ body {
   font-size: 1.15rem; line-height: 1.8; color: #222; margin-bottom: 1.5rem;
 }
 
-/* --- PRINTING STYLES --- */
+/* --- Gender Color Coding for Noun Tables --- */
+.category-row td {
+  background-color: #f0f4f4 !important;
+  font-weight: 700 !important;
+  text-align: center;
+  color: var(--theme-primary) !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+.header-der { background-color: #e1f3fa !important; color: #00658F !important; }
+.header-die { background-color: #fae8eb !important; color: #9C4150 !important; }
+.header-das { background-color: #eaf1e4 !important; color: #386A20 !important; }
+
+.noun-der { color: #00658F; font-weight: 600; }
+.noun-die { color: #9C4150; font-weight: 600; }
+.noun-das { color: #386A20; font-weight: 600; }
+
+/* --- Reading Passages Styles --- */
+.passage-title { color: var(--theme-primary); margin-bottom: 0.2rem; margin-top: 0; }
+.passage-fokus { font-size: 0.9rem; color: #666; font-style: italic; margin-bottom: 1rem; }
+
+/* --- PRINTING STYLES FIX --- */
 @media print {
   body * { visibility: hidden; }
-  #printableArea, #printableArea * { visibility: visible; }
-  #printableArea { position: absolute; left: 0; top: 0; width: 100%; color: black !important; }
-  .modal-content { border: none; box-shadow: none; background: white !important; transform: none !important; }
-  .grammar-table th { background-color: #f0f0f0 !important; color: black !important; border: 1px solid #ccc; }
+  
+  #grammarModal, #grammarModal * { visibility: visible; }
+  
+  #grammarModal {
+    position: absolute; left: 0; top: 0; width: 100%; height: auto; background: white !important;
+  }
+  
+  .modal-content {
+    position: static !important; width: 100%; max-width: 100%; padding: 0;
+    border: none; box-shadow: none; transform: none !important;
+    max-height: none !important; overflow: visible !important;
+  }
+
+  /* CRITICAL: Prevents breaking tables and texts across pages */
+  tr, .reading-passage, h2, h3, p { 
+    page-break-inside: avoid !important; 
+    page-break-after: auto !important;
+  }
+  
+  /* Hide the buttons so they don't print */
+  .close-modal-btn, #modalActions { display: none !important; }
+  
+  .grammar-table th { border: 1px solid #ccc; }
   .grammar-table td { border: 1px solid #ccc; }
 }

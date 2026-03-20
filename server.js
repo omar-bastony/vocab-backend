@@ -15,13 +15,13 @@ app.use(express.json());
 // Serve the frontend files
 app.use(express.static(__dirname));
 
-
 const imageCache = new Map();
 const translationCache = new Map();
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
+
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
 // --- AI SPELLCHECK ROUTE (Powered by Groq) ---
@@ -78,7 +78,7 @@ app.post('/api/translate', async (req, res) => {
       `{"language":"${l}","meanings":["m1","m2"],"example":"Translated sentence"}`
     ).join(',\n        ');
 
-const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
+    const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "german": {
         "word": "The correctly spelled singular base form of the word (e.g., if input is 'Äpfel' return 'Apfel'). Pay strict attention to correct umlauts!",
@@ -121,20 +121,48 @@ const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON ob
     }
 });
 
+// --- AI STORY GENERATOR ROUTE (Powered by Groq) ---
 app.get('/api/generate-reading', async (req, res) => {
     try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `Write a short reading passage in German appropriate for A1-A2 language learners. Focus on daily life topics (e.g., hobbies, shopping, weather). Return ONLY a JSON object with this structure: { "title": "German Title", "text": "The German text paragraph" }`;
-        
-        const result = await model.generateContent(prompt);
-        let rawText = result.response.text().trim();
-        rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
-        
+        const promptText = `Schreibe einen kurzen, interessanten Lesetext (Niveau A1-A2) auf Deutsch.
+        Themen: Alltag, Urlaub, Einkaufen oder Hobbys.
+        WICHTIG: Antworte NUR mit einem gültigen JSON-Objekt.
+        Format:
+        {
+          "title": "Titel des Textes",
+          "fokus": "Fokus: [Grammatik oder Vokabel Thema]",
+          "text": "Der deutsche Text (ca. 5-7 Sätze)..."
+        }`;
+
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile",
+                messages: [
+                    { role: "system", content: "Du bist ein hilfreicher Deutschlehrer. Output ONLY valid JSON." },
+                    { role: "user", content: promptText }
+                ],
+                response_format: { type: "json_object" }, // Guarantees JSON output
+                temperature: 0.7 // A slightly higher temperature to make the stories creative
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Groq API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const rawText = data.choices[0].message.content.trim();
         const jsonResult = JSON.parse(rawText);
+
         res.json(jsonResult);
     } catch (error) {
-        console.error("Passage generation failed:", error);
+        console.error("Groq Passage generation failed:", error);
         res.status(500).json({ error: "Failed to generate reading passage" });
     }
 });
@@ -172,8 +200,6 @@ app.get('/api/image', async (req, res) => {
 });
 
 // --- VERCEL EXPORT ---
-// We only listen on a port if we are running locally. 
-// Otherwise, we export the app for Vercel's serverless environment.
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 10000;
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Local server on port ${PORT}`));

@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Materials Clicks (Vocab & Reading)
+// Materials Clicks (Vocab & Reading)
   document.querySelectorAll('.material-btn').forEach(item => {
     item.addEventListener('click', (e) => {
       const type = e.target.getAttribute('data-type');
@@ -172,7 +172,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (type === 'lesetexte') {
         renderReadingPassages();
-      } else {
+      } else if (type === 'nomen') {
+        // --- NOUNS: GROUPED & COLORED ---
+        const data = materialData.nomen;
+        let html = `<p>${data.description}</p><table class="grammar-table">`;
+        html += `<thead><tr><th class="header-der">Maskulin (der)</th><th class="header-die">Feminin (die)</th><th class="header-das">Neutral (das)</th></tr></thead><tbody>`;
+        
+        data.categories.forEach(cat => {
+            html += `<tr class="category-row"><td colspan="3">${cat.name}</td></tr>`;
+            const maxRows = Math.max(cat.der.length, cat.die.length, cat.das.length);
+            for(let i = 0; i < maxRows; i++) {
+                html += `<tr>`;
+                html += `<td><span class="noun-der">${cat.der[i] || ''}</span></td>`;
+                html += `<td><span class="noun-die">${cat.die[i] || ''}</span></td>`;
+                html += `<td><span class="noun-das">${cat.das[i] || ''}</span></td>`;
+                html += `</tr>`;
+            }
+        });
+        html += `</tbody></table>`;
+        openModal(data.title, html, false);
+
+      } else if (type === 'adjektive' || type === 'verben') {
+        // --- ADJECTIVES & VERBS ---
         const data = materialData[type];
         let html = `<p>${data.description}</p><table class="grammar-table"><thead><tr>`;
         data.headers.forEach(h => html += `<th>${h}</th>`);
@@ -193,12 +214,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderReadingPassages() {
     let savedTexts = JSON.parse(localStorage.getItem('savedPassages'));
     if (!savedTexts || savedTexts.length === 0) {
-        savedTexts = materialData.lesetexte; // Load default from data.js
+        savedTexts = materialData.lesetexte; 
     }
     
     let html = '';
     savedTexts.forEach(item => {
-        html += `<h3>${item.title}</h3><div class="reading-passage">${item.text}</div>`;
+        html += `<div class="reading-passage">
+                    <h3 class="passage-title">${item.title}</h3>
+                    ${item.fokus ? `<div class="passage-fokus">${item.fokus}</div>` : ''}
+                    <p>${item.text}</p>
+                 </div>`;
     });
     
     openModal("Lesetexte (A1/A2)", html, true);
