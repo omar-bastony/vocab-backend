@@ -5,11 +5,15 @@ import 'dotenv/config';
 const app = express();
 app.use(cors());
 app.use(express.json());
+const path = require('path');
+app.use(express.static(__dirname));
 
 const imageCache = new Map();
 const translationCache = new Map();
 
-app.get('/', (req, res) => res.status(200).send("Server is running!"));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
 // --- AI SPELLCHECK ROUTE (Powered by Groq) ---
@@ -66,14 +70,14 @@ app.post('/api/translate', async (req, res) => {
       `{"language":"${l}","meanings":["m1","m2"],"example":"Translated sentence"}`
     ).join(',\n        ');
 
-    const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
+const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "german": {
-        "word": "the base word",
+        "word": "The correctly spelled singular base form of the word (e.g., if input is 'Äpfel' return 'Apfel'). Pay strict attention to correct umlauts!",
         "partOfSpeech": "noun" or "verb" or "other",
-        "article": "der/die/das" (only if noun, otherwise null),
-        "pluralTip": "e.g., -s, -en, -er" (only if noun, otherwise null),
-        "conjugationTips": "e.g., ich gehe, du gehst, er/sie/es geht" (only if verb, otherwise null),
+        "article": "der/die/das" (The correct article for the SINGULAR noun, e.g., 'der' for 'Apfel'. null if not a noun),
+        "pluralTip": "The correct plural form including umlauts if applicable (e.g., 'die Äpfel'). null if not a noun",
+        "conjugationTips": "e.g., ich gehe, du gehst, er/sie/es geht (only if verb, otherwise null)",
         "example": "A simple A1/A2 German example sentence."
       },
       "translations": [

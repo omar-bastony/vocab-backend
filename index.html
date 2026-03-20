@@ -10,14 +10,35 @@
 <body>
   <main class="app-container">
     <header class="top-header fade-in">
-      <div class="lang-menu-wrapper">
-        <button id="langMenuBtn" class="lang-toggle-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          Sprachen
-        </button>
-        <div id="langDropdown" class="lang-dropdown hidden">
-          <div id="langCheckboxes" class="lang-checkbox-grid">
-             </div>
+      <div class="header-controls">
+        <div class="dropdown-wrapper">
+          <button id="grammarMenuBtn" class="action-toggle-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+            Grammatik
+          </button>
+          <div id="grammarDropdown" class="custom-dropdown hidden">
+             <div class="dropdown-category">A1 Grammatik</div>
+             <button class="grammar-item" data-topic="pronomen">Pronomen, sein & haben</button>
+             <button class="grammar-item" data-topic="kasus">Artikel & Kasus</button>
+             <button class="grammar-item" data-topic="fragen">Fragen stellen</button>
+             
+             <div class="dropdown-category">A2 Grammatik</div>
+             <button class="grammar-item" data-topic="perfekt">Das Perfekt</button>
+             <button class="grammar-item" data-topic="praeteritum">Das Präteritum</button>
+             <button class="grammar-item" data-topic="nebensaetze">Nebensätze</button>
+             <button class="grammar-item" data-topic="wechselpraep">Wechselpräpositionen</button>
+             <button class="grammar-item" data-topic="komparativ">Komparativ & Superlativ</button>
+          </div>
+        </div>
+
+        <div class="dropdown-wrapper">
+          <button id="langMenuBtn" class="action-toggle-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            Sprachen
+          </button>
+          <div id="langDropdown" class="custom-dropdown hidden" style="width: 300px;">
+            <div id="langCheckboxes" class="lang-checkbox-grid"></div>
+          </div>
         </div>
       </div>
     </header>
@@ -51,16 +72,23 @@
       <div class="central-right">
         <div class="central-image-container">
            <div id="mainImageShimmer" class="image-shimmer shimmer" style="display: none;"></div>
-           <img id="centralImage" class="dynamic-image" src="https://placehold.co/600x400/e0f2f1/006a6a?text=Übersetzung" alt="Visual Context">
+           <img id="centralImage" class="dynamic-image" src="https://placehold.co/600x400/f0f0f0/888888?text=Übersetzung" alt="Visual Context">
         </div>
       </div>
     </section>
 
     <section class="output-section">
-      <div id="translationGrid" class="translation-grid">
-      </div>
+      <div id="translationGrid" class="translation-grid"></div>
     </section>
   </main>
+
+  <div id="grammarModal" class="modal-overlay hidden">
+    <div class="modal-content modal-content-large">
+      <button id="closeModalBtn" class="close-modal-btn">&times;</button>
+      <h2 id="modalTitle" class="modal-title">Grammatik</h2>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
