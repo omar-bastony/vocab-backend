@@ -32,69 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const printBtn = document.getElementById('printBtn');
   const generateAiBtn = document.getElementById('generateAiBtn');
 
-  // ==========================================
-  // --- A1 & A2 GERMAN GRAMMAR LIBRARY ---
-  // ==========================================
-  const grammarContent = {
-    pronomen: {
-      title: "Pronomen, sein, haben & Possessiv",
-      body: `
-        <p>Die wichtigsten Verben und Begleiter auf Deutsch. Die Verben <strong>sein</strong> und <strong>haben</strong> sind unregelmäßig.</p>
-        <table class="grammar-table">
-          <thead><tr><th>Pronomen</th><th>sein</th><th>haben</th><th>Possessiv</th></tr></thead>
-          <tbody>
-            <tr><td>ich</td><td>bin</td><td>habe</td><td>mein</td></tr>
-            <tr><td>du</td><td>bist</td><td>hast</td><td>dein</td></tr>
-            <tr><td>er/sie/es</td><td>ist</td><td>hat</td><td>sein / ihr / sein</td></tr>
-            <tr><td>wir</td><td>sind</td><td>haben</td><td>unser</td></tr>
-            <tr><td>ihr</td><td>seid</td><td>habt</td><td>euer</td></tr>
-            <tr><td>sie/Sie</td><td>sind</td><td>haben</td><td>ihr / Ihr</td></tr>
-          </tbody>
-        </table>
-      `
-    },
-    kasus: {
-      title: "Artikel & Kasus (Fälle)",
-      body: `
-        <table class="grammar-table">
-          <thead><tr><th>Kasus</th><th>Maskulin (der)</th><th>Feminin (die)</th><th>Neutral (das)</th><th>Plural (die)</th></tr></thead>
-          <tbody>
-            <tr><td>Nominativ</td><td>der</td><td>die</td><td>das</td><td>die</td></tr>
-            <tr><td>Akkusativ</td><td><span class="grammar-highlight">den</span></td><td>die</td><td>das</td><td>die</td></tr>
-            <tr><td>Dativ</td><td><span class="grammar-highlight">dem</span></td><td><span class="grammar-highlight">der</span></td><td><span class="grammar-highlight">dem</span></td><td><span class="grammar-highlight">den (+n)</span></td></tr>
-          </tbody>
-        </table>
-      `
-    },
-    fragen: {
-      title: "Fragen stellen",
-      body: `
-        <p><strong>1. W-Fragen:</strong> Wer? Was? Wo? Wann? <em>(Fragewort auf Position 1)</em></p>
-        <p><strong>2. Ja/Nein-Fragen:</strong> <em>(Verb auf Position 1)</em> "Lernst du Deutsch?"</p>
-      `
-    },
-    perfekt: {
-      title: "Das Perfekt",
-      body: `<p><strong>Regel:</strong> haben/sein (Pos 2) + Partizip II (Ende).</p>`
-    },
-    praeteritum: {
-      title: "Das Präteritum",
-      body: `<p>Wichtig für A2: sein (war), haben (hatte), und Modalverben (musste, wollte...).</p>`
-    },
-    nebensaetze: {
-      title: "Nebensätze",
-      body: `<p>Bei "weil", "dass" und "wenn" steht das Verb am <strong>Ende</strong>!</p>`
-    },
-    wechselpraep: {
-      title: "Wechselpräpositionen",
-      body: `<p>Akkusativ (Wohin? - Bewegung) vs. Dativ (Wo? - Position).</p>`
-    },
-    komparativ: {
-      title: "Komparativ & Superlativ",
-      body: `<p>schnell -> schneller -> am schnellsten.</p>`
-    }
-  };
-
   // --- TTS Mapping (Language Codes) ---
   const ttsLanguageCodes = {
     'English': 'en-US', 'Arabic': 'ar-SA', 'Russian': 'ru-RU', 'Dari': 'fa-AF', 
