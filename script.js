@@ -49,8 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Language Checkboxes Setup (Added Somali and Armenian) ---
-  const availableLanguages = [
+  // Helper function to get currently checked languages
+  function getSelectedLanguages() {
+    return Array.from(langCheckboxes.querySelectorAll('input:checked')).map(cb => cb.value);
+  }
+
+  // --- Language Checkboxes Setup (With LocalStorage) ---
+  const defaultLanguages = [
     { name: 'English', checked: true }, { name: 'Arabic', checked: true },
     { name: 'Russian', checked: true }, { name: 'Dari', checked: true },
     { name: 'Farsi', checked: true }, { name: 'Amharic', checked: true },
@@ -60,10 +65,24 @@ document.addEventListener('DOMContentLoaded', () => {
     { name: 'Armenian', checked: false }
   ];
 
-  availableLanguages.forEach(lang => {
+  // Load saved languages from local storage (if any)
+  const savedLangs = JSON.parse(localStorage.getItem('savedLanguages'));
+
+  defaultLanguages.forEach(lang => {
+    // If we have saved preferences, use them. Otherwise, use the defaults.
+    const isChecked = savedLangs ? savedLangs.includes(lang.name) : lang.checked;
+
     const label = document.createElement('label');
     label.className = 'checkbox-label';
-    label.innerHTML = `<input type="checkbox" value="${lang.name}" ${lang.checked ? 'checked' : ''}> ${lang.name}`;
+    label.innerHTML = `<input type="checkbox" value="${lang.name}" ${isChecked ? 'checked' : ''}> ${lang.name}`;
+    
+    // Add event listener to save choices whenever a box is checked/unchecked
+    const checkbox = label.querySelector('input');
+    checkbox.addEventListener('change', () => {
+      const selected = getSelectedLanguages();
+      localStorage.setItem('savedLanguages', JSON.stringify(selected));
+    });
+
     langCheckboxes.appendChild(label);
   });
 
@@ -199,10 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
   grammarModal.addEventListener('click', (e) => { if (e.target === grammarModal) closeGrammarModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGrammarModal(); });
 
-  function getSelectedLanguages() {
-    return Array.from(langCheckboxes.querySelectorAll('input:checked')).map(cb => cb.value);
-  }
-
   // --- Keyboard & Input Logic ---
   let typingTimer;
   const doneTypingInterval = 800; 
@@ -306,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       translationGrid.innerHTML = ''; 
       
-      // NEW: Filter the master list of translations to show only what the user selected
+      // Filter the master list of translations to show only what the user selected
       const filteredTranslations = data.translations.filter(langData => selectedLangs.includes(langData.language));
       
       filteredTranslations.forEach((langData, index) => {
