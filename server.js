@@ -3,21 +3,20 @@ import cors from 'cors';
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import Groq from "groq-sdk";
-import { Redis } from '@upstash/redis'; // NEW: Import Redis
+import { Redis } from '@upstash/redis'; // NEW: Imported Redis
 
+// Define __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve the frontend files
 app.use(express.static(__dirname));
 
-// Initialize Groq
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-// NEW: Initialize Global Redis Cache
+// NEW: Initialize Global Redis Cache (Replaces local Map caches)
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -45,15 +44,16 @@ app.post('/api/spellcheck', async (req, res) => {
                 'Content-Type': 'application/json' 
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: "llama-3.3-70b-versatile", // Lightning fast, highly accurate model
                 messages: [{ role: "user", content: promptText }],
-                temperature: 0 
+                temperature: 0 // Strict, no creativity needed for spellcheck
             })
         });
         
         const data = await response.json();
         const result = data.choices[0].message.content.trim();
         
+        // If the AI says it's perfect, or it just returned the exact same word, return null
         if (result === "PERFECT" || result.toLowerCase() === word.toLowerCase()) {
             res.json({ corrected: null });
         } else {
@@ -72,7 +72,7 @@ app.post('/api/translate', async (req, res) => {
     
     const targetLangs = languages && languages.length > 0 ? languages : ['English'];
     
-    // NEW: Check GLOBAL Redis Cache first
+    // NEW: Check Global Redis Cache first!
     const cacheKey = `trans:${word.toLowerCase()}-${targetLangs.join(',')}`;
     try {
         const cachedData = await redis.get(cacheKey);
@@ -88,6 +88,7 @@ app.post('/api/translate', async (req, res) => {
       `{"language":"${l}","meanings":["m1","m2"],"example":"Translated sentence"}`
     ).join(',\n        ');
 
+    // ADDED: The specific Dari vs Farsi rule at the very bottom of the prompt
     const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "german": {
@@ -115,7 +116,7 @@ app.post('/api/translate', async (req, res) => {
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" }, 
+                response_format: { type: "json_object" }, // Forces Groq to return perfect JSON
                 temperature: 0.1
             })
         });
@@ -123,7 +124,7 @@ app.post('/api/translate', async (req, res) => {
         const data = await response.json();
         const parsedData = JSON.parse(data.choices[0].message.content);
         
-        // NEW: Save to GLOBAL Redis Cache
+        // NEW: Save to Global Redis Cache for future users
         try {
             await redis.set(cacheKey, parsedData);
         } catch (cacheSetErr) {
@@ -140,14 +141,43 @@ app.post('/api/translate', async (req, res) => {
 // --- AI STORY GENERATOR ROUTE (Powered by Groq) ---
 app.get('/api/generate-reading', async (req, res) => {
     try {
-        const promptText = `Schreibe einen kurzen, interessanten Lesetext (Niveau A1-A2) auf Deutsch.
-        Themen: Alltag, Urlaub, Einkaufen oder Hobbys.
-        WICHTIG: Antworte NUR mit einem gültigen JSON-Objekt.
+        // KEPT YOUR EXACT AWESOME 3-STORY PROMPT:
+        const promptText = `Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
+        
+        WICHTIG: Erfinde jedes Mal komplett NEUE Geschichten! Wähle für jeden Text ein anderes, zufälliges Thema aus dieser riesigen Auswahl (oder erfinde eigene verrückte Themen): 
+        - Verrückte Haustiere oder sprechende Tiere
+        - Lustige Missgeschicke im Alltag
+        - Eine Reise in die Zukunft oder Zeitreisen
+        - Mysteriöse Entdeckungen im Wald oder auf dem Dachboden
+        - Ungewöhnliche Berufe (z.B. UFO-Forscher, Schokoladentester)
+        - Überleben in der Natur
+        - Kochen von magischen oder exotischen Gerichten
+        - Ein Leben auf einem anderen Planeten
+        - Spannende Kriminalfälle für Anfänger
+        - Geistergeschichten oder lustige Monster
+        
+        Vermeide langweilige Standard-Texte. Die Texte sollen humorvoll, spannend oder überraschend sein (ca. 5-7 Sätze pro Text).
+        
+        Antworte NUR mit einem gültigen JSON-Objekt, das ein Array namens "stories" enthält.
         Format:
         {
-          "title": "Titel des Textes",
-          "fokus": "Fokus: [Grammatik oder Vokabel Thema]",
-          "text": "Der deutsche Text (ca. 5-7 Sätze)..."
+          "stories": [
+            {
+              "title": "Titel des Textes 1",
+              "fokus": "Fokus: [Grammatik oder Vokabel Thema]",
+              "text": "Der deutsche Text 1 (ca. 5-7 Sätze)..."
+            },
+            {
+              "title": "Titel des Textes 2",
+              "fokus": "...",
+              "text": "..."
+            },
+            {
+              "title": "Titel des Textes 3",
+              "fokus": "...",
+              "text": "..."
+            }
+          ]
         }`;
 
         const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -160,11 +190,11 @@ app.get('/api/generate-reading', async (req, res) => {
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [
-                    { role: "system", content: "Du bist ein hilfreicher Deutschlehrer. Output ONLY valid JSON." },
+                    { role: "system", content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal." },
                     { role: "user", content: promptText }
                 ],
                 response_format: { type: "json_object" }, 
-                temperature: 0.7 
+                temperature: 0.9 
             })
         });
 
