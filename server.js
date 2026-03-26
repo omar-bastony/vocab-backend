@@ -3,20 +3,25 @@ import cors from 'cors';
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Groq from "groq-sdk";
+import { Redis } from '@upstash/redis'; // NEW: Import Redis
 
-// Define __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// Serve the frontend files
 app.use(express.static(__dirname));
 
-const imageCache = new Map();
-const translationCache = new Map();
+// Initialize Groq
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// NEW: Initialize Global Redis Cache
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
@@ -40,16 +45,15 @@ app.post('/api/spellcheck', async (req, res) => {
                 'Content-Type': 'application/json' 
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile", // Lightning fast, highly accurate model
+                model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: promptText }],
-                temperature: 0 // Strict, no creativity needed for spellcheck
+                temperature: 0 
             })
         });
         
         const data = await response.json();
         const result = data.choices[0].message.content.trim();
         
-        // If the AI says it's perfect, or it just returned the exact same word, return null
         if (result === "PERFECT" || result.toLowerCase() === word.toLowerCase()) {
             res.json({ corrected: null });
         } else {
@@ -68,10 +72,16 @@ app.post('/api/translate', async (req, res) => {
     
     const targetLangs = languages && languages.length > 0 ? languages : ['English'];
     
-    // Check Cache first to save API calls and make it instant!
-    const cacheKey = `${word.toLowerCase()}-${targetLangs.join(',')}`;
-    if (translationCache.has(cacheKey)) {
-        return res.json(translationCache.get(cacheKey));
+    // NEW: Check GLOBAL Redis Cache first
+    const cacheKey = `trans:${word.toLowerCase()}-${targetLangs.join(',')}`;
+    try {
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData) {
+            console.log("Serving from Global Redis Cache!");
+            return res.json(cachedData);
+        }
+    } catch (cacheErr) {
+        console.error("Redis Cache Read Error:", cacheErr);
     }
 
     const langPromptStr = targetLangs.map(l => 
@@ -91,7 +101,8 @@ app.post('/api/translate', async (req, res) => {
       "translations": [
         ${langPromptStr}
       ]
-    }`;
+    }
+    IMPORTANT: For "Dari" and "Farsi", you must provide the specific regional vocabulary used in Afghanistan (Dari) versus Iran (Farsi) if a difference exists.`;
 
     try {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -104,7 +115,7 @@ app.post('/api/translate', async (req, res) => {
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" }, // Forces Groq to return perfect JSON
+                response_format: { type: "json_object" }, 
                 temperature: 0.1
             })
         });
@@ -112,8 +123,13 @@ app.post('/api/translate', async (req, res) => {
         const data = await response.json();
         const parsedData = JSON.parse(data.choices[0].message.content);
         
-        // Save to cache for the next time this word is searched
-        translationCache.set(cacheKey, parsedData);
+        // NEW: Save to GLOBAL Redis Cache
+        try {
+            await redis.set(cacheKey, parsedData);
+        } catch (cacheSetErr) {
+            console.error("Redis Cache Write Error:", cacheSetErr);
+        }
+
         res.json(parsedData);
     } catch (err) {
         console.error("Groq Error:", err);
@@ -124,43 +140,14 @@ app.post('/api/translate', async (req, res) => {
 // --- AI STORY GENERATOR ROUTE (Powered by Groq) ---
 app.get('/api/generate-reading', async (req, res) => {
     try {
-        // UPDATE 1: Ein viel ausführlicherer Prompt mit Fokus auf extreme Variation und Kreativität
-        const promptText = `Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
-        
-        WICHTIG: Erfinde jedes Mal komplett NEUE Geschichten! Wähle für jeden Text ein anderes, zufälliges Thema aus dieser riesigen Auswahl (oder erfinde eigene verrückte Themen): 
-        - Verrückte Haustiere oder sprechende Tiere
-        - Lustige Missgeschicke im Alltag
-        - Eine Reise in die Zukunft oder Zeitreisen
-        - Mysteriöse Entdeckungen im Wald oder auf dem Dachboden
-        - Ungewöhnliche Berufe (z.B. UFO-Forscher, Schokoladentester)
-        - Überleben in der Natur
-        - Kochen von magischen oder exotischen Gerichten
-        - Ein Leben auf einem anderen Planeten
-        - Spannende Kriminalfälle für Anfänger
-        - Geistergeschichten oder lustige Monster
-        
-        Vermeide langweilige Standard-Texte. Die Texte sollen humorvoll, spannend oder überraschend sein (ca. 5-7 Sätze pro Text).
-        
-        Antworte NUR mit einem gültigen JSON-Objekt, das ein Array namens "stories" enthält.
+        const promptText = `Schreibe einen kurzen, interessanten Lesetext (Niveau A1-A2) auf Deutsch.
+        Themen: Alltag, Urlaub, Einkaufen oder Hobbys.
+        WICHTIG: Antworte NUR mit einem gültigen JSON-Objekt.
         Format:
         {
-          "stories": [
-            {
-              "title": "Titel des Textes 1",
-              "fokus": "Fokus: [Grammatik oder Vokabel Thema]",
-              "text": "Der deutsche Text 1 (ca. 5-7 Sätze)..."
-            },
-            {
-              "title": "Titel des Textes 2",
-              "fokus": "...",
-              "text": "..."
-            },
-            {
-              "title": "Titel des Textes 3",
-              "fokus": "...",
-              "text": "..."
-            }
-          ]
+          "title": "Titel des Textes",
+          "fokus": "Fokus: [Grammatik oder Vokabel Thema]",
+          "text": "Der deutsche Text (ca. 5-7 Sätze)..."
         }`;
 
         const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -173,14 +160,11 @@ app.get('/api/generate-reading', async (req, res) => {
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [
-                    // System-Message angepasst, um Wiederholungen zu verbieten
-                    { role: "system", content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal." },
+                    { role: "system", content: "Du bist ein hilfreicher Deutschlehrer. Output ONLY valid JSON." },
                     { role: "user", content: promptText }
                 ],
                 response_format: { type: "json_object" }, 
-                // UPDATE 2: Die Temperature von 0.7 auf 0.9 erhöht. 
-                // Das macht die KI experimentierfreudiger und zufälliger!
-                temperature: 0.9 
+                temperature: 0.7 
             })
         });
 
@@ -199,12 +183,17 @@ app.get('/api/generate-reading', async (req, res) => {
     }
 });
 
-// --- IMAGE ROUTE (Unsplash - Unchanged) ---
+// --- IMAGE ROUTE (Unsplash - Now with Redis) ---
 app.get('/api/image', async (req, res) => {
     const { word } = req.query;
     if (!word) return res.status(400).json({ error: "Word required" });
 
-    if (imageCache.has(word)) return res.json(imageCache.get(word));
+    // NEW: Check Global Redis Cache
+    const imgCacheKey = `img:${word.toLowerCase()}`;
+    try {
+        const cachedImg = await redis.get(imgCacheKey);
+        if (cachedImg) return res.json(cachedImg);
+    } catch (e) { console.error(e); }
 
     const getFallback = (w) => ({ imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(w)}` });
 
@@ -220,7 +209,10 @@ app.get('/api/image', async (req, res) => {
 
         if (data.results && data.results.length > 0) {
             const imageData = { imageUrl: data.results[0].urls.small };
-            imageCache.set(word, imageData);
+            
+            // NEW: Save image result to Redis
+            try { await redis.set(imgCacheKey, imageData); } catch (e) {}
+            
             return res.json(imageData);
         } else {
             return res.json(getFallback(word));
