@@ -67,28 +67,32 @@ app.post('/api/spellcheck', async (req, res) => {
 
 // --- MAIN TRANSLATION ROUTE (Powered by Groq) ---
 app.post('/api/translate', async (req, res) => {
-    const { word, languages } = req.body;
+    const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
     
-    const targetLangs = languages && languages.length > 0 ? languages : ['English'];
+    // ALWAYS force translation to all 13 languages to maximize cache hit rate!
+    const allLanguages = [
+        'English', 'Arabic', 'Russian', 'Dari', 'Farsi', 'Amharic', 
+        'Tigrinya', 'Spanish', 'French', 'Turkish', 'Ukrainian', 
+        'Somali', 'Armenian'
+    ];
     
-    // NEW: Check Global Redis Cache first!
-    const cacheKey = `trans:${word.toLowerCase()}-${targetLangs.join(',')}`;
+    // NEW: Check Global Redis Cache using ONLY the word as the key
+    const cacheKey = `trans:all:${word.toLowerCase()}`;
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
-            console.log("Serving from Global Redis Cache!");
+            console.log("Serving ALL translations from Global Redis Cache!");
             return res.json(cachedData);
         }
     } catch (cacheErr) {
         console.error("Redis Cache Read Error:", cacheErr);
     }
 
-    const langPromptStr = targetLangs.map(l => 
+    const langPromptStr = allLanguages.map(l => 
       `{"language":"${l}","meanings":["m1","m2"],"example":"Translated sentence"}`
     ).join(',\n        ');
 
-    // ADDED: The specific Dari vs Farsi rule at the very bottom of the prompt
     const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "german": {
@@ -116,7 +120,7 @@ app.post('/api/translate', async (req, res) => {
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" }, // Forces Groq to return perfect JSON
+                response_format: { type: "json_object" }, 
                 temperature: 0.1
             })
         });
@@ -124,7 +128,7 @@ app.post('/api/translate', async (req, res) => {
         const data = await response.json();
         const parsedData = JSON.parse(data.choices[0].message.content);
         
-        // NEW: Save to Global Redis Cache for future users
+        // Save to Global Redis Cache for ALL future users
         try {
             await redis.set(cacheKey, parsedData);
         } catch (cacheSetErr) {

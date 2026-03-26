@@ -32,11 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const printBtn = document.getElementById('printBtn');
   const generateAiBtn = document.getElementById('generateAiBtn');
 
-  // --- TTS Mapping (Language Codes) ---
+  // --- TTS Mapping (Added Somali and Armenian) ---
   const ttsLanguageCodes = {
     'English': 'en-US', 'Arabic': 'ar-SA', 'Russian': 'ru-RU', 'Dari': 'fa-AF', 
     'Farsi': 'fa-IR', 'Amharic': 'am-ET', 'Tigrinya': 'ti-ET', 'Spanish': 'es-ES',
-    'French': 'fr-FR', 'Turkish': 'tr-TR', 'Ukrainian': 'uk-UA'
+    'French': 'fr-FR', 'Turkish': 'tr-TR', 'Ukrainian': 'uk-UA',
+    'Somali': 'so-SO', 'Armenian': 'hy-AM'
   };
 
   function playAudio(text, langCode) {
@@ -48,14 +49,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Language Checkboxes Setup ---
+  // --- Language Checkboxes Setup (Added Somali and Armenian) ---
   const availableLanguages = [
     { name: 'English', checked: true }, { name: 'Arabic', checked: true },
     { name: 'Russian', checked: true }, { name: 'Dari', checked: true },
     { name: 'Farsi', checked: true }, { name: 'Amharic', checked: true },
     { name: 'Tigrinya', checked: true }, { name: 'Spanish', checked: false },
     { name: 'French', checked: false }, { name: 'Turkish', checked: false },
-    { name: 'Ukrainian', checked: true }
+    { name: 'Ukrainian', checked: true }, { name: 'Somali', checked: false },
+    { name: 'Armenian', checked: false }
   ];
 
   availableLanguages.forEach(lang => {
@@ -95,13 +97,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.grammar-item:not(.material-btn)').forEach(item => {
     item.addEventListener('click', (e) => {
       const topicKey = e.target.getAttribute('data-topic');
-      const content = grammarContent[topicKey];
+      const content = grammarContent[topicKey]; // Uses data.js implicitly if integrated
       if (content) openModal(content.title, content.body, false);
       closeAllDropdowns();
     });
   });
 
-// Materials Clicks (Vocab & Reading)
+  // Materials Clicks (Vocab & Reading)
   document.querySelectorAll('.material-btn').forEach(item => {
     item.addEventListener('click', (e) => {
       const type = e.target.getAttribute('data-type');
@@ -110,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (type === 'lesetexte') {
         renderReadingPassages();
       } else if (type === 'nomen') {
-        // --- NOUNS: GROUPED & COLORED ---
         const data = materialData.nomen;
         let html = `<p>${data.description}</p><table class="grammar-table">`;
         html += `<thead><tr><th class="header-der">Maskulin (der)</th><th class="header-die">Feminin (die)</th><th class="header-das">Neutral (das)</th></tr></thead><tbody>`;
@@ -130,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(data.title, html, false);
 
       } else if (type === 'adjektive' || type === 'verben') {
-        // --- ADJECTIVES & VERBS ---
         const data = materialData[type];
         let html = `<p>${data.description}</p><table class="grammar-table"><thead><tr>`;
         data.headers.forEach(h => html += `<th>${h}</th>`);
@@ -166,30 +166,24 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal("Lesetexte (A1/A2)", html, true);
   }
 
-// Generate AI Text
+  // Generate AI Text
   generateAiBtn.addEventListener('click', async () => {
     generateAiBtn.disabled = true;
-    generateAiBtn.innerHTML = "Generiere Texte..."; // Updated text to plural
+    generateAiBtn.innerHTML = "Generiere Text...";
     
     try {
       const res = await fetch(`${BACKEND_URL}/api/generate-reading`);
       if (res.ok) {
         const data = await res.json();
-        
-        // UPDATE 2: Save the whole array of stories to local storage
-        if (data.stories && Array.isArray(data.stories)) {
-            localStorage.setItem('savedPassages', JSON.stringify(data.stories));
-            renderReadingPassages(); // Re-render window with the 3 new stories
-        } else {
-            throw new Error("Invalid data format received from AI");
-        }
+        localStorage.setItem('savedPassages', JSON.stringify(data.stories));
+        renderReadingPassages(); 
       }
     } catch (e) {
       console.error("AI Generation failed", e);
       alert("Fehler beim Generieren. Bitte stellen Sie sicher, dass das Backend erreichbar ist.");
     } finally {
       generateAiBtn.disabled = false;
-      generateAiBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="margin-right: 8px;"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="M4.93 19.07l2.83-2.83"></path><path d="M16.24 7.76l2.83-2.83"></path></svg> Neue Texte generieren (KI)`;
+      generateAiBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="margin-right: 8px;"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="M4.93 19.07l2.83-2.83"></path><path d="M16.24 7.76l2.83-2.83"></path></svg> Neuen Text generieren (KI)`;
     }
   });
 
@@ -275,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: text, languages: selectedLangs })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: text }) // Removed languages payload, backend translates all
       });
 
       if (!textRes.ok) throw new Error("Translation request failed");
@@ -311,7 +305,11 @@ document.addEventListener('DOMContentLoaded', () => {
       germanSpeakBtn.classList.remove('hidden');
 
       translationGrid.innerHTML = ''; 
-      data.translations.forEach((langData, index) => {
+      
+      // NEW: Filter the master list of translations to show only what the user selected
+      const filteredTranslations = data.translations.filter(langData => selectedLangs.includes(langData.language));
+      
+      filteredTranslations.forEach((langData, index) => {
         const card = createTranslationCard(langData);
         card.style.animationDelay = `${index * 0.05}s`;
         card.classList.add('fade-in');
