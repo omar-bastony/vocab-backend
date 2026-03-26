@@ -186,9 +186,9 @@ body {
 .card-header { border-bottom: 1px solid #f0f0f0; padding-bottom: 0.3rem; margin-bottom: 0.3rem; }
 .lang-title { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: var(--md-sys-color-outline); letter-spacing: 1px; }
 .word-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.translated-word { font-size: 1.3rem; font-weight: bold; margin: 0; color: var(--theme-primary); flex: 1; transition: color 0.4s ease; }
+.translated-word { font-size: 1.8rem; font-weight: bold; margin: 0; color: var(--theme-primary); flex: 1; transition: color 0.4s ease; }
 .multiple-meanings { font-size: 0.9rem; font-style: italic; color: #777; font-weight: 400; }
-.example-sentence { font-size: 1rem; margin-top: 0.2rem; color: #444; }
+.example-sentence { font-size: 1.4rem; margin-top: 0.2rem; color: #444; }
 .card-speak-btn { color: var(--md-sys-color-outline); }
 .card-speak-btn:hover { color: var(--theme-primary); background-color: var(--theme-box-bg); }
 .card-speak-btn svg { width: 18px; height: 18px; }
