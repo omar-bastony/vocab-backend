@@ -173,7 +173,16 @@ body {
 .german-example { font-size: 1.15rem; color: #222; margin: 0; font-style: italic; }
 
 .central-image-container { width: 100%; height: 180px; border-radius: var(--border-radius-medium); overflow: hidden; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.dynamic-image { width: 100%; height: 100%; object-fit: cover; }
+.dynamic-image { 
+  width: 100%; 
+  height: 100%; 
+  
+  /* FIX: 'contain' prevents the image from zooming and getting cut off */
+  object-fit: contain; 
+  
+  /* NEW: Keeps the image edges slightly rounded to match the theme */
+  border-radius: 4px; 
+}
 .speak-btn { background: none; border: none; color: var(--theme-primary); cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.4s ease; }
 .speak-btn:hover { background-color: var(--theme-box-bg); transform: scale(1.1); }
 .speak-btn svg { width: 22px; height: 22px; }
@@ -267,7 +276,20 @@ body {
   /* Fix the central box layout breaking */
   .central-box { flex-direction: column; padding: 1.2rem; gap: 1rem; }
   .central-right { flex: auto; width: 100%; height: auto; margin-top: 0.5rem; }
-  .central-image-container { height: 200px; }
+.central-image-container { 
+  width: 100%; 
+  height: 180px; 
+  border-radius: var(--border-radius-medium); 
+  overflow: hidden; 
+  position: relative; 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+  
+  /* NEW: Adds a dynamic theme-matching background behind the image */
+  background-color: var(--md-sys-color-surface); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
   
   /* Input group adjustments */
   .input-group { flex-direction: column; align-items: stretch; }
