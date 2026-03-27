@@ -331,7 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
         translationGrid.appendChild(card);
       });
 
-      const imgRes = await fetch(`${BACKEND_URL}/api/image?word=${encodeURIComponent(germanData.word)}`);
+      //const imgRes = await fetch(`${BACKEND_URL}/api/image?word=${encodeURIComponent(germanData.word)}`);
+	  // Find the English translation from the master list
+      const englishData = data.translations.find(lang => lang.language === 'English');
+      const searchWord = englishData ? englishData.meanings[0] : germanData.word;
+
+      // Search Unsplash using the English word!
+      const imgRes = await fetch(`${BACKEND_URL}/api/image?word=${encodeURIComponent(searchWord)}`);
       const imgData = await imgRes.json();
 
       if (imgData.imageUrl) {
