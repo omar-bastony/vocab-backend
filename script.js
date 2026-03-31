@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const translationGrid = document.getElementById('translationGrid');
   const wordDetailsArea = document.getElementById('wordDetailsArea');
   
-  // Dropdowns
+// --- UI Elements & Dropdowns ---
   const langMenuBtn = document.getElementById('langMenuBtn');
   const langDropdown = document.getElementById('langDropdown');
   const langCheckboxes = document.getElementById('langCheckboxes');
@@ -17,6 +17,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const materialMenuBtn = document.getElementById('materialMenuBtn');
   const materialDropdown = document.getElementById('materialDropdown');
+
+  // NEW: Drawer Elements
+  const menuToggleBtn = document.getElementById('menuToggleBtn');
+  const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+  const mainNavDrawer = document.getElementById('mainNavDrawer');
+  const drawerOverlay = document.getElementById('drawerOverlay');
+
+  // Drawer Toggle Logic
+  function toggleDrawer(forceClose = false) {
+    if (forceClose || mainNavDrawer.classList.contains('open')) {
+        mainNavDrawer.classList.remove('open');
+        drawerOverlay.classList.remove('active');
+    } else {
+        mainNavDrawer.classList.add('open');
+        drawerOverlay.classList.add('active');
+    }
+  }
+
+  menuToggleBtn.addEventListener('click', () => toggleDrawer());
+  closeDrawerBtn.addEventListener('click', () => toggleDrawer(true));
+  drawerOverlay.addEventListener('click', () => toggleDrawer(true));
 
   // Spelling & Audio
   const umlautSuggestion = document.getElementById('umlautSuggestion');

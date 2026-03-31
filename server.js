@@ -28,14 +28,34 @@ app.get('/', (req, res) => {
 
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
-// --- AI SPELLCHECK ROUTE (Powered by Groq) ---
+// --- AI SPELLCHECK ROUTE (Database First, Groq Fallback) ---
 app.post('/api/spellcheck', async (req, res) => {
     const { word } = req.body;
-    if (!word || word.length < 3) return res.json({ corrected: null });
+    if (!word || word.length < 2) return res.json({ corrected: null });
 
-    const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${word}". If it is perfectly spelled (including correct capitalization for nouns and correct umlauts), return exactly the string "PERFECT". If it is misspelled, missing an umlaut, or has the wrong capitalization (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel', 'haus' -> 'Haus'), return ONLY the corrected word. Do not return any other text, punctuation, or explanation.`;
+    const cleanWord = word.trim();
+    const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
 
-try {
+    // 1. FAST PATH: Check the Global Redis Cache First!
+    try {
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData && cachedData.german && cachedData.german.word) {
+            const correctSpelling = cachedData.german.word;
+            // If the cached dictionary word is capitalized/spelled differently than user input:
+            if (correctSpelling !== cleanWord) {
+                return res.json({ corrected: correctSpelling });
+            } else {
+                return res.json({ corrected: null }); // It's already perfect
+            }
+        }
+    } catch (cacheErr) {
+        console.error("Redis Spellcheck Read Error:", cacheErr);
+    }
+
+    // 2. FALLBACK PATH: If not in cache, ask Groq AI
+    const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${cleanWord}". If it is perfectly spelled (including correct capitalization for nouns and correct umlauts), return exactly the string "PERFECT". If it is misspelled, missing an umlaut, or has the wrong capitalization (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel', 'haus' -> 'Haus'), return ONLY the corrected word. Do not return any other text, punctuation, or explanation.`;
+
+    try {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
@@ -50,17 +70,18 @@ try {
             })
         });
         
-        // NEW: Check if Groq rejected the request
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("🔥 Groq API Rejected Spellcheck:", JSON.stringify(errorData));
-            return res.json({ corrected: null }); // Fail gracefully
-        }
-
+        if (!response.ok) return res.json({ corrected: null });
+        
         const data = await response.json();
         const result = data.choices[0].message.content.trim();
         
-        if (result === "PERFECT" || result.toLowerCase() === word.toLowerCase()) {
+        // UI SAFETY CATCH: If the AI ignores instructions and writes a long sentence, 
+        // or includes spaces, ignore it so it doesn't break the UI.
+        if (result.length > 25 || result.includes(" ")) {
+            return res.json({ corrected: null });
+        }
+
+        if (result === "PERFECT" || result.toLowerCase() === cleanWord.toLowerCase()) {
             res.json({ corrected: null });
         } else {
             res.json({ corrected: result });
@@ -242,7 +263,7 @@ app.get('/api/image', async (req, res) => {
         if (cachedImg) return res.json(cachedImg);
     } catch (e) { console.error(e); }
 
-    const getFallback = (w) => ({ imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(w)}` });
+    const getFallback = (w) => ({ imageUrl: `./logo.png` });
 
     if (!process.env.UNSPLASH_ACCESS_KEY) return res.json(getFallback(word));
 
