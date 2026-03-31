@@ -97,6 +97,14 @@ app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
     
+    const cleanWord = word.trim();
+
+    // NEW SECURITY BOUNCER: Prevent sentences and error messages from being translated/cached!
+    // Rejects if the input is longer than 45 characters OR contains more than 3 spaces.
+    if (cleanWord.length > 45 || cleanWord.split(' ').length > 4) {
+        return res.status(400).json({ error: "Input too long. Please enter a single word or short phrase." });
+    }
+    
     // ALWAYS force translation to all 13 languages to maximize cache hit rate!
     const allLanguages = [
         'English', 'Arabic', 'Russian', 'Dari', 'Farsi', 'Amharic', 
@@ -104,8 +112,10 @@ app.post('/api/translate', async (req, res) => {
         'Somali', 'Armenian'
     ];
     
-    // NEW: Check Global Redis Cache using ONLY the word as the key
-    const cacheKey = `trans:all:${word.toLowerCase()}`;
+    // Check Global Redis Cache using ONLY the word as the key
+    const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
+    
+    // ... [KEEP THE REST OF YOUR ROUTE EXACTLY AS IT IS] ...
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
