@@ -305,33 +305,28 @@ app.get('/api/image', async (req, res) => {
     }
 });
 
-// --- TEMPORARY DATABASE CLEANUP ROUTE ---
+// --- TEMPORARY IMAGE CACHE CLEANUP ROUTE ---
 // WARNING: Delete this route after you use it once!
-app.get('/api/clean-db', async (req, res) => {
+app.get('/api/clean-images', async (req, res) => {
     try {
         let deletedCount = 0;
         let cursor = '0';
 
         do {
-            const [nextCursor, keys] = await redis.scan(cursor, { match: 'trans:all:*', count: 100 });
+            // Scan specifically for keys that start with "img:"
+            const [nextCursor, keys] = await redis.scan(cursor, { match: 'img:*', count: 100 });
             cursor = nextCursor;
 
             for (const key of keys) {
-                const word = key.replace('trans:all:', '');
-                
-                // If the word is insanely long, or has too many spaces, DELETE IT!
-                if (word.length > 45 || word.split(' ').length > 4) {
-                    console.log(`🗑️ Deleting bad entry: "${word.substring(0, 30)}..."`);
-                    await redis.del(key);
-                    deletedCount++;
-                }
+                await redis.del(key);
+                deletedCount++;
             }
         } while (cursor !== '0');
 
-        res.json({ success: true, message: `✅ Cleanup Complete! Deleted ${deletedCount} bad entries from Upstash.` });
+        res.json({ success: true, message: `✅ Image Cleanup Complete! Deleted ${deletedCount} old images from Upstash.` });
     } catch (error) {
-        console.error("Cleanup Error:", error);
-        res.status(500).json({ success: false, error: "Cleanup failed" });
+        console.error("Image Cleanup Error:", error);
+        res.status(500).json({ success: false, error: "Image cleanup failed" });
     }
 });
 
