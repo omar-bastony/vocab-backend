@@ -41,11 +41,14 @@ app.post('/api/spellcheck', async (req, res) => {
         const cachedData = await redis.get(cacheKey);
         if (cachedData && cachedData.german && cachedData.german.word) {
             const correctSpelling = cachedData.german.word;
-            // If the cached dictionary word is capitalized/spelled differently than user input:
-            if (correctSpelling !== cleanWord) {
+            
+            // FIX: Compare them in lowercase! 
+            // If the only difference is capital letters, this evaluates to false and ignores it.
+            // But if an umlaut is missing ("apfel" vs "äpfel"), it still catches it!
+            if (correctSpelling.toLowerCase() !== cleanWord.toLowerCase()) {
                 return res.json({ corrected: correctSpelling });
             } else {
-                return res.json({ corrected: null }); // It's already perfect
+                return res.json({ corrected: null }); 
             }
         }
     } catch (cacheErr) {
@@ -53,7 +56,8 @@ app.post('/api/spellcheck', async (req, res) => {
     }
 
     // 2. FALLBACK PATH: If not in cache, ask Groq AI
-    const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${cleanWord}". If it is perfectly spelled (including correct capitalization for nouns and correct umlauts), return exactly the string "PERFECT". If it is misspelled, missing an umlaut, or has the wrong capitalization (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel', 'haus' -> 'Haus'), return ONLY the corrected word. Do not return any other text, punctuation, or explanation.`;
+    // FIX: Updated the prompt to explicitly tell the AI to ignore capitalization
+    const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${cleanWord}". If it is perfectly spelled (IGNORING capitalization, but strictly enforcing umlauts), return exactly the string "PERFECT". If it is genuinely misspelled or missing an umlaut (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel'), return ONLY the corrected word. Do NOT correct a word if the only mistake is a lowercase first letter.`;
 
     try {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -81,6 +85,7 @@ app.post('/api/spellcheck', async (req, res) => {
             return res.json({ corrected: null });
         }
 
+        // FIX: Double-check the AI's math just in case it ignored our prompt
         if (result === "PERFECT" || result.toLowerCase() === cleanWord.toLowerCase()) {
             res.json({ corrected: null });
         } else {
