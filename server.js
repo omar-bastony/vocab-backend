@@ -275,7 +275,7 @@ app.get('/api/image', async (req, res) => {
         if (cachedImg) return res.json(cachedImg);
     } catch (e) { console.error(e); }
 
-    const getFallback = (w) => ({ imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(w)}` });
+    const getFallback = (w) => ({ imageUrl: `./logo.png` });
 
     if (!process.env.UNSPLASH_ACCESS_KEY) return res.json(getFallback(germanWord));
 
