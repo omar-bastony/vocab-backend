@@ -35,7 +35,7 @@ app.post('/api/spellcheck', async (req, res) => {
 
     const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${word}". If it is perfectly spelled (including correct capitalization for nouns and correct umlauts), return exactly the string "PERFECT". If it is misspelled, missing an umlaut, or has the wrong capitalization (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel', 'haus' -> 'Haus'), return ONLY the corrected word. Do not return any other text, punctuation, or explanation.`;
 
-    try {
+try {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
@@ -44,16 +44,22 @@ app.post('/api/spellcheck', async (req, res) => {
                 'Content-Type': 'application/json' 
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile", // Lightning fast, highly accurate model
+                model: "llama-3.3-70b-versatile",
                 messages: [{ role: "user", content: promptText }],
-                temperature: 0 // Strict, no creativity needed for spellcheck
+                temperature: 0 
             })
         });
         
+        // NEW: Check if Groq rejected the request
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("🔥 Groq API Rejected Spellcheck:", JSON.stringify(errorData));
+            return res.json({ corrected: null }); // Fail gracefully
+        }
+
         const data = await response.json();
         const result = data.choices[0].message.content.trim();
         
-        // If the AI says it's perfect, or it just returned the exact same word, return null
         if (result === "PERFECT" || result.toLowerCase() === word.toLowerCase()) {
             res.json({ corrected: null });
         } else {
@@ -109,7 +115,7 @@ app.post('/api/translate', async (req, res) => {
     }
     IMPORTANT: For "Dari" and "Farsi", you must provide the specific regional vocabulary used in Afghanistan (Dari) versus Iran (Farsi) if a difference exists.`;
 
-    try {
+	try {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
@@ -125,10 +131,16 @@ app.post('/api/translate', async (req, res) => {
             })
         });
         
+        // NEW: Check if Groq rejected the request
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("🔥 Groq API Rejected Translation:", JSON.stringify(errorData));
+            throw new Error(`Groq API Error: ${response.status}`);
+        }
+
         const data = await response.json();
         const parsedData = JSON.parse(data.choices[0].message.content);
         
-        // Save to Global Redis Cache for ALL future users
         try {
             await redis.set(cacheKey, parsedData);
         } catch (cacheSetErr) {
