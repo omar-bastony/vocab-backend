@@ -353,9 +353,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
 // NEW: Use the AI's Safe Image Search Query to fetch classroom-appropriate images!
+// Find the English translation and Safe Query
       const searchWord = data.safeImageSearchQuery || data.german.word;
       
-      const imgRes = await fetch(`${BACKEND_URL}/api/image?word=${encodeURIComponent(searchWord)}`);
+      // NEW: Send BOTH the original German word (for caching) AND the safe query (for Unsplash)
+      const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`);
       const imgData = await imgRes.json();
 
       if (imgData.imageUrl) {

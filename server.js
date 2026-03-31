@@ -252,42 +252,46 @@ app.get('/api/generate-reading', async (req, res) => {
 });
 
 // --- IMAGE ROUTE (Unsplash - Now with Redis) ---
+// --- IMAGE ROUTE (Unsplash - Now with Dual-Key Caching) ---
 app.get('/api/image', async (req, res) => {
-    const { word } = req.query;
-    if (!word) return res.status(400).json({ error: "Word required" });
+    // NEW: We now receive TWO words from the frontend
+    const { germanWord, searchQuery } = req.query;
+    if (!germanWord || !searchQuery) return res.status(400).json({ error: "Missing parameters" });
 
-    // NEW: Check Global Redis Cache
-    const imgCacheKey = `img:${word.toLowerCase()}`;
+    // 1. CACHE CHECK: Always use the strict German word for the database key
+    const imgCacheKey = `img:${germanWord.toLowerCase()}`;
     try {
         const cachedImg = await redis.get(imgCacheKey);
         if (cachedImg) return res.json(cachedImg);
     } catch (e) { console.error(e); }
 
-    const getFallback = (w) => ({ imageUrl: `./logo.png` });
+    const getFallback = (w) => ({ imageUrl: `https://placehold.co/600x400/e0f2f1/006a6a?text=${encodeURIComponent(w)}` });
 
-    if (!process.env.UNSPLASH_ACCESS_KEY) return res.json(getFallback(word));
+    if (!process.env.UNSPLASH_ACCESS_KEY) return res.json(getFallback(germanWord));
 
+    // 2. UNSPLASH SEARCH: Always use the Safe English Query for the actual search
     try {
         const response = await fetch(
-            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(word)}&per_page=1&content_filter=high`,
+            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=1&content_filter=high`,
             { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
         );
         if (!response.ok) throw new Error("Unsplash API Error");
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
+            // Using urls.regular for high quality!
             const imageData = { imageUrl: data.results[0].urls.regular };
             
-            // NEW: Save image result to Redis
+            // 3. CACHE SAVE: Save the high-quality image URL under the strict German key
             try { await redis.set(imgCacheKey, imageData); } catch (e) {}
             
             return res.json(imageData);
         } else {
-            return res.json(getFallback(word));
+            return res.json(getFallback(germanWord));
         }
     } catch (err) {
         console.error("Image Error:", err);
-        res.json(getFallback(word));
+        res.json(getFallback(germanWord));
     }
 });
 
