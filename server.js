@@ -109,6 +109,7 @@ app.post('/api/translate', async (req, res) => {
         "conjugationTips": "e.g., ich gehe, du gehst, er/sie/es geht (only if verb, otherwise null)",
         "example": "A simple A1/A2 German example sentence."
       },
+      "safeImageSearchQuery": "A 2-3 word highly specific, SAFE, and educational English search phrase for Unsplash. If the word has multiple meanings or NSFW/adult potential (e.g., 'hot', 'breast', 'butt', 'corps'), force a safe educational context (e.g., 'hot weather thermometer', 'chicken breast food', 'human body anatomy diagram').",
       "translations": [
         ${langPromptStr}
       ]
@@ -247,7 +248,7 @@ app.get('/api/image', async (req, res) => {
 
     try {
         const response = await fetch(
-            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(word)}&per_page=1`,
+            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(word)}&per_page=1&content_filter=high`,
             { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
         );
         if (!response.ok) throw new Error("Unsplash API Error");
