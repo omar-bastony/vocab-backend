@@ -310,30 +310,6 @@ app.get('/api/image', async (req, res) => {
     }
 });
 
-// --- TEMPORARY TRANSLATION CACHE FLUSH ROUTE ---
-// WARNING: Delete this route after you use it once!
-app.get('/api/flush-translations', async (req, res) => {
-    try {
-        let deletedCount = 0;
-        let cursor = '0';
-
-        do {
-            // Scan for ALL master translation keys
-            const [nextCursor, keys] = await redis.scan(cursor, { match: 'trans:all:*', count: 100 });
-            cursor = nextCursor;
-
-            for (const key of keys) {
-                await redis.del(key);
-                deletedCount++;
-            }
-        } while (cursor !== '0');
-
-        res.json({ success: true, message: `✅ Cache Flush Complete! Deleted ${deletedCount} outdated translations from Upstash.` });
-    } catch (error) {
-        console.error("Flush Error:", error);
-        res.status(500).json({ success: false, error: "Flush failed" });
-    }
-});
 
 // --- VERCEL EXPORT ---
 if (process.env.NODE_ENV !== 'production') {
