@@ -3,7 +3,7 @@ import cors from 'cors';
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Redis } from '@upstash/redis'; // NEW: Imported Redis
+import { Redis } from '@upstash/redis';
 
 // Define __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -16,7 +16,7 @@ app.use(express.json());
 // Serve the frontend files
 app.use(express.static(__dirname));
 
-// NEW: Initialize Global Redis Cache (Replaces local Map caches)
+// Initialize Global Redis Cache
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -28,25 +28,42 @@ app.get('/', (req, res) => {
 
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
-// --- AI SPELLCHECK ROUTE (Database First, Groq Fallback) ---
+// =======================================================================
+// 1. AI SPELLCHECK ROUTE (Database First, Gemini Fallback)
+// =======================================================================
 app.post('/api/spellcheck', async (req, res) => {
     const { word } = req.body;
     if (!word || word.length < 2) return res.json({ corrected: null });
 
     const cleanWord = word.trim();
     
-    // NEW: If the input contains a space, it's a sentence. Abort spellcheck!
+    // If the input contains a space, it's a sentence. Abort spellcheck!
     if (cleanWord.includes(" ")) {
         return res.json({ corrected: null });
     }
 
     const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
 
-    // 1. FAST PATH: Check the Global Redis Cache First!
+    // FAST PATH: Check Global Redis Cache First
     try {
-        // --- NEW GEMINI 1.5 FLASH ENGINE ---
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData && cachedData.german && cachedData.german.word) {
+            const correctSpelling = cachedData.german.word;
+            if (correctSpelling.toLowerCase() !== cleanWord.toLowerCase()) {
+                return res.json({ corrected: correctSpelling });
+            } else {
+                return res.json({ corrected: null }); 
+            }
+        }
+    } catch (cacheErr) {
+        console.error("Redis Spellcheck Read Error:", cacheErr);
+    }
+
+    // FALLBACK PATH: Ask Gemini AI
+    const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${cleanWord}". If it is perfectly spelled (IGNORING capitalization, but strictly enforcing umlauts), return exactly the string "PERFECT". If it is genuinely misspelled or missing an umlaut (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel'), return ONLY the corrected word. Do NOT correct a word if the only mistake is a lowercase first letter.`;
+
+    try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -77,72 +94,28 @@ app.post('/api/spellcheck', async (req, res) => {
     }
 });
 
-    // 2. FALLBACK PATH: If not in cache, ask Groq AI
-    // FIX: Updated the prompt to explicitly tell the AI to ignore capitalization
-    const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${cleanWord}". If it is perfectly spelled (IGNORING capitalization, but strictly enforcing umlauts), return exactly the string "PERFECT". If it is genuinely misspelled or missing an umlaut (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel'), return ONLY the corrected word. Do NOT correct a word if the only mistake is a lowercase first letter.`;
-
-    try {
-        const url = 'https://api.groq.com/openai/v1/chat/completions';
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json' 
-            },
-            body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
-                messages: [{ role: "user", content: promptText }],
-                temperature: 0 
-            })
-        });
-        
-        if (!response.ok) return res.json({ corrected: null });
-        
-        const data = await response.json();
-        const result = data.choices[0].message.content.trim();
-        
-        // UI SAFETY CATCH: If the AI ignores instructions and writes a long sentence, 
-        // or includes spaces, ignore it so it doesn't break the UI.
-        if (result.length > 25 || result.includes(" ")) {
-            return res.json({ corrected: null });
-        }
-
-        // FIX: Double-check the AI's math just in case it ignored our prompt
-        if (result === "PERFECT" || result.toLowerCase() === cleanWord.toLowerCase()) {
-            res.json({ corrected: null });
-        } else {
-            res.json({ corrected: result });
-        }
-    } catch (err) {
-        console.error("Spellcheck Error:", err);
-        res.json({ corrected: null });
-    }
-});
-
-// --- MAIN TRANSLATION ROUTE (Powered by Groq) ---
+// =======================================================================
+// 2. MAIN TRANSLATION ROUTE (Gemini Powered)
+// =======================================================================
 app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
     if (!word) return res.status(400).json({ error: "Word required" });
     
     const cleanWord = word.trim();
 
-    // NEW SECURITY BOUNCER: Prevent sentences and error messages from being translated/cached!
-    // Rejects if the input is longer than 45 characters OR contains more than 3 spaces.
+    // Prevent sentences and error messages from being translated/cached!
     if (cleanWord.length > 45 || cleanWord.split(' ').length > 4) {
         return res.status(400).json({ error: "Input too long. Please enter a single word or short phrase." });
     }
     
-    // ALWAYS force translation to all 13 languages to maximize cache hit rate!
     const allLanguages = [
         'English', 'Arabic', 'Russian', 'Dari', 'Farsi', 'Amharic', 
         'Tigrinya', 'Spanish', 'French', 'Turkish', 'Ukrainian', 
         'Somali', 'Armenian'
     ];
     
-    // Check Global Redis Cache using ONLY the word as the key
     const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
     
-    // ... [KEEP THE REST OF YOUR ROUTE EXACTLY AS IT IS] ...
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
@@ -167,71 +140,15 @@ app.post('/api/translate', async (req, res) => {
         "conjugationTips": "e.g., ich gehe, du gehst, er/sie/es geht (only if verb, otherwise null)",
         "example": "A simple A1/A2 German example sentence."
       },
-      "safeImageSearchQuery": "A 2-3 word highly specific, SAFE, and educational English search phrase for Unsplash. If the word has multiple meanings or NSFW/adult potential (e.g., 'hot', 'breast', 'butt', 'corps'), force a safe educational context (e.g., 'hot weather thermometer', 'chicken breast food', 'human body anatomy diagram').",
+      "safeImageSearchQuery": "A 2-3 word highly specific, SAFE, and educational English search phrase for Unsplash.",
       "translations": [
         ${langPromptStr}
       ]
     }
     IMPORTANT: For "Dari" and "Farsi", you must provide the specific regional vocabulary used in Afghanistan (Dari) versus Iran (Farsi) if a difference exists.`;
 
-	try {
-        const url = 'https://api.groq.com/openai/v1/chat/completions';
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json' 
-            },
-            body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
-                messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" }, 
-                temperature: 0.1
-            })
-        });
-        
-        // NEW: Check if Groq rejected the request
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("🔥 Groq API Rejected Translation:", JSON.stringify(errorData));
-            throw new Error(`Groq API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const parsedData = JSON.parse(data.choices[0].message.content);
-        
-        try {
-            await redis.set(cacheKey, parsedData);
-        } catch (cacheSetErr) {
-            console.error("Redis Cache Write Error:", cacheSetErr);
-        }
-
-        res.json(parsedData);
-    } catch (err) {
-        console.error("Groq Error:", err);
-        res.status(500).json({ error: "Translation failed" });
-    }
-});
-
-// --- SENTENCE ANALYSIS ROUTE (With Auto-Correction) ---
-  app.post('/api/analyze-sentence', async (req, res) => {
-    const { sentence } = req.body;
-    if (!sentence) return res.status(400).json({ error: "Sentence required" });
-    
-    const cleanSentence = sentence.trim();
-
-    // Security Bouncer: Limit sentence length to prevent abuse (max ~20-30 words)
-    if (cleanSentence.length > 200) {
-        return res.status(400).json({ error: "Sentence too long. Please enter a shorter sentence." });
-    }
-
-    const cacheKey = `sentence:all:${cleanSentence.toLowerCase()}`;
-
-    // 1. Check Global Redis Cache First
     try {
-        // --- NEW GEMINI 1.5 FLASH ENGINE ---
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -239,38 +156,54 @@ app.post('/api/translate', async (req, res) => {
                 contents: [{ parts: [{ text: promptText }] }],
                 generationConfig: { 
                     temperature: 0.1,
-                    responseMimeType: "application/json" // Gemini's superpower for perfect JSON
+                    responseMimeType: "application/json" 
                 }
             })
         });
         
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error("🔥 Gemini API Rejected Sentence Analysis:", JSON.stringify(errorData));
             throw new Error(`Gemini API Error: ${response.status}`);
         }
 
         const data = await response.json();
         
-        // Gemini nests the text response slightly differently than Groq
-        const resultText = data.candidates[0].content.parts[0].text;
-        const parsedData = JSON.parse(resultText);
+        // Strip markdown blocks if Gemini accidentally included them
+        let rawText = data.candidates[0].content.parts[0].text;
+        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
         
-        // Save to Global Redis Cache for future users
-        try {
-            await redis.set(cacheKey, parsedData);
-        } catch (cacheSetErr) {
-            console.error("Redis Cache Write Error:", cacheSetErr);
-        }
+        const parsedData = JSON.parse(rawText);
+        
+        try { await redis.set(cacheKey, parsedData); } catch (e) {}
 
         res.json(parsedData);
     } catch (err) {
-        console.error("Gemini Sentence Error:", err);
-        res.status(500).json({ error: "Sentence analysis failed" });
+        console.error("Gemini Translation Error:", err);
+        res.status(500).json({ error: "Translation failed" });
     }
 });
 
-    // 2. The AI Prompt for Deep Grammar Analysis (Strict Grammar Teacher Mode)
+// =======================================================================
+// 3. SENTENCE ANALYSIS ROUTE (Gemini Powered)
+// =======================================================================
+app.post('/api/analyze-sentence', async (req, res) => {
+    const { sentence } = req.body;
+    if (!sentence) return res.status(400).json({ error: "Sentence required" });
+    
+    const cleanSentence = sentence.trim();
+
+    if (cleanSentence.length > 200) {
+        return res.status(400).json({ error: "Sentence too long. Please enter a shorter sentence." });
+    }
+
+    const cacheKey = `sentence:all:${cleanSentence.toLowerCase()}`;
+
+    try {
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData) return res.json(cachedData);
+    } catch (cacheErr) {
+        console.error("Redis Cache Read Error:", cacheErr);
+    }
+
     const promptText = `Act as a strict, expert German grammar teacher. Analyze this text: "${cleanSentence}".
     First, aggressively check for and FIX all spelling, capitalization, AND GRAMMAR errors. 
     CRITICAL: Pay strict attention to verb government (Kasusrektion). For example, verbs like "helfen", "danken", and "gefallen" strictly require the DATIVE case (e.g., "Hilf mir", NOT "Hilf mich"). You MUST fix any wrong cases, adjective endings, or conjugations.
@@ -298,56 +231,51 @@ app.post('/api/translate', async (req, res) => {
     }`;
 
     try {
-        const url = 'https://api.groq.com/openai/v1/chat/completions';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json' 
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
-                messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" }, 
-                temperature: 0.1
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { 
+                    temperature: 0.1,
+                    responseMimeType: "application/json" 
+                }
             })
         });
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("🔥 Groq API Rejected Sentence Analysis:", JSON.stringify(errorData));
-            throw new Error(`Groq API Error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Gemini API Error: ${response.status}`);
 
         const data = await response.json();
-        const parsedData = JSON.parse(data.choices[0].message.content);
         
-        // Save to Global Redis Cache for future users
-        try {
-            await redis.set(cacheKey, parsedData);
-        } catch (cacheSetErr) {
-            console.error("Redis Cache Write Error:", cacheSetErr);
-        }
+        // Strip markdown formatting from the response
+        let rawText = data.candidates[0].content.parts[0].text;
+        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        
+        const parsedData = JSON.parse(rawText);
+        
+        try { await redis.set(cacheKey, parsedData); } catch (e) {}
 
         res.json(parsedData);
     } catch (err) {
-        console.error("Groq Sentence Error:", err);
+        console.error("Gemini Sentence Error:", err);
         res.status(500).json({ error: "Sentence analysis failed" });
     }
 });
 
-
-// --- AI STORY GENERATOR ROUTE (Powered by Groq) ---
+// =======================================================================
+// 4. AI STORY GENERATOR ROUTE (Gemini Powered)
+// =======================================================================
 app.get('/api/generate-reading', async (req, res) => {
     try {
-        // KEPT YOUR EXACT AWESOME 3-STORY PROMPT:
-        const promptText = `Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
+        const promptText = `Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal.
         
-        WICHTIG: Erfinde jedes Mal komplett NEUE Geschichten! Wähle für jeden Text ein anderes, zufälliges Thema aus dieser riesigen Auswahl (oder erfinde eigene verrückte Themen): 
+        Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
+        WICHTIG: Erfinde jedes Mal komplett NEUE Geschichten! Wähle für jeden Text ein anderes, zufälliges Thema aus dieser riesigen Auswahl: 
         - Verrückte Haustiere oder sprechende Tiere
         - Lustige Missgeschicke im Alltag
         - Eine Reise in die Zukunft oder Zeitreisen
-        - Mysteriöse Entdeckungen im Wald oder auf dem Dachboden
+        - Mysteriöse Entdeckungen
         - Ungewöhnliche Berufe (z.B. UFO-Forscher, Schokoladentester)
         - Überleben in der Natur
         - Kochen von magischen oder exotischen Gerichten
@@ -379,47 +307,43 @@ app.get('/api/generate-reading', async (req, res) => {
           ]
         }`;
 
-        const url = 'https://api.groq.com/openai/v1/chat/completions';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
-                messages: [
-                    { role: "system", content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal." },
-                    { role: "user", content: promptText }
-                ],
-                response_format: { type: "json_object" }, 
-                temperature: 0.9 
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { 
+                    temperature: 0.9,
+                    responseMimeType: "application/json" 
+                }
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`Groq API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
 
         const data = await response.json();
-        const rawText = data.choices[0].message.content.trim();
+        
+        // Strip markdown formatting from the response
+        let rawText = data.candidates[0].content.parts[0].text;
+        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        
         const jsonResult = JSON.parse(rawText);
 
         res.json(jsonResult);
     } catch (error) {
-        console.error("Groq Passage generation failed:", error);
+        console.error("Gemini Passage generation failed:", error);
         res.status(500).json({ error: "Failed to generate reading passage" });
     }
 });
 
-// --- IMAGE ROUTE (Unsplash - Now with Redis) ---
-// --- IMAGE ROUTE (Unsplash - Now with Dual-Key Caching) ---
+// =======================================================================
+// 5. IMAGE ROUTE (Unsplash - Dual-Key Caching)
+// =======================================================================
 app.get('/api/image', async (req, res) => {
-    // NEW: We now receive TWO words from the frontend
     const { germanWord, searchQuery } = req.query;
     if (!germanWord || !searchQuery) return res.status(400).json({ error: "Missing parameters" });
 
-    // 1. CACHE CHECK: Always use the strict German word for the database key
     const imgCacheKey = `img:${germanWord.toLowerCase()}`;
     try {
         const cachedImg = await redis.get(imgCacheKey);
@@ -430,7 +354,6 @@ app.get('/api/image', async (req, res) => {
 
     if (!process.env.UNSPLASH_ACCESS_KEY) return res.json(getFallback(germanWord));
 
-    // 2. UNSPLASH SEARCH: Always use the Safe English Query for the actual search
     try {
         const response = await fetch(
             `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=1&content_filter=high`,
@@ -440,12 +363,8 @@ app.get('/api/image', async (req, res) => {
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
-            // Using urls.regular for high quality!
             const imageData = { imageUrl: data.results[0].urls.regular };
-            
-            // 3. CACHE SAVE: Save the high-quality image URL under the strict German key
             try { await redis.set(imgCacheKey, imageData); } catch (e) {}
-            
             return res.json(imageData);
         } else {
             return res.json(getFallback(germanWord));
@@ -455,7 +374,6 @@ app.get('/api/image', async (req, res) => {
         res.json(getFallback(germanWord));
     }
 });
-
 
 // --- VERCEL EXPORT ---
 if (process.env.NODE_ENV !== 'production') {
