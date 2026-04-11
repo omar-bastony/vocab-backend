@@ -211,7 +211,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
         {
           "word": "Exact word from CORRECTED sentence",
           "baseForm": "Dictionary form",
-          "pos": "noun, verb, article, pronoun, adjective, preposition, or other",
+          "pos": "STRICTLY IN GERMAN: Nomen, Verb, Artikel, Pronomen, Adjektiv, Präposition, Adverb, or Sonstiges",
           "englishMeaning": "Direct English translation in context",
           "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv' or null.",
           "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. '1. Person Singular', 'Plural'). Do NOT include case."

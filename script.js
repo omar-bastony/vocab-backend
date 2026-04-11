@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sentenceArea.innerHTML = `
             <div class="fade-in" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 0.5rem; padding-left: 4px;">
                 <div class="shimmer" style="width: 18px; height: 18px; border-radius: 50%;"></div>
-                <div class="shimmer" style="height: 12px; width: 140px; border-radius: 4px;"></div>
+                <div class="shimmer" style="height: 12px; width: 280px; border-radius: 4px;"></div>
             </div>`;
             sentenceArea.classList.remove('hidden');
         }
