@@ -44,22 +44,38 @@ app.post('/api/spellcheck', async (req, res) => {
 
     // 1. FAST PATH: Check the Global Redis Cache First!
     try {
-        const cachedData = await redis.get(cacheKey);
-        if (cachedData && cachedData.german && cachedData.german.word) {
-            const correctSpelling = cachedData.german.word;
-            
-            // FIX: Compare them in lowercase! 
-            // If the only difference is capital letters, this evaluates to false and ignores it.
-            // But if an umlaut is missing ("apfel" vs "äpfel"), it still catches it!
-            if (correctSpelling.toLowerCase() !== cleanWord.toLowerCase()) {
-                return res.json({ corrected: correctSpelling });
-            } else {
-                return res.json({ corrected: null }); 
-            }
+        // --- NEW GEMINI 1.5 FLASH ENGINE ---
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { temperature: 0 }
+            })
+        });
+        
+        if (!response.ok) return res.json({ corrected: null });
+        
+        const data = await response.json();
+        const result = data.candidates[0].content.parts[0].text.trim();
+        
+        // UI SAFETY CATCH
+        if (result.length > 25 || result.includes(" ")) {
+            return res.json({ corrected: null });
         }
-    } catch (cacheErr) {
-        console.error("Redis Spellcheck Read Error:", cacheErr);
+
+        if (result === "PERFECT" || result.toLowerCase() === cleanWord.toLowerCase()) {
+            res.json({ corrected: null });
+        } else {
+            res.json({ corrected: result });
+        }
+    } catch (err) {
+        console.error("Spellcheck Error:", err);
+        res.json({ corrected: null });
     }
+});
 
     // 2. FALLBACK PATH: If not in cache, ask Groq AI
     // FIX: Updated the prompt to explicitly tell the AI to ignore capitalization
@@ -198,7 +214,7 @@ app.post('/api/translate', async (req, res) => {
 });
 
 // --- SENTENCE ANALYSIS ROUTE (With Auto-Correction) ---
-app.post('/api/analyze-sentence', async (req, res) => {
+  app.post('/api/analyze-sentence', async (req, res) => {
     const { sentence } = req.body;
     if (!sentence) return res.status(400).json({ error: "Sentence required" });
     
@@ -213,13 +229,46 @@ app.post('/api/analyze-sentence', async (req, res) => {
 
     // 1. Check Global Redis Cache First
     try {
-        const cachedData = await redis.get(cacheKey);
-        if (cachedData) {
-            return res.json(cachedData);
+        // --- NEW GEMINI 1.5 FLASH ENGINE ---
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { 
+                    temperature: 0.1,
+                    responseMimeType: "application/json" // Gemini's superpower for perfect JSON
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("🔥 Gemini API Rejected Sentence Analysis:", JSON.stringify(errorData));
+            throw new Error(`Gemini API Error: ${response.status}`);
         }
-    } catch (cacheErr) {
-        console.error("Redis Cache Read Error:", cacheErr);
+
+        const data = await response.json();
+        
+        // Gemini nests the text response slightly differently than Groq
+        const resultText = data.candidates[0].content.parts[0].text;
+        const parsedData = JSON.parse(resultText);
+        
+        // Save to Global Redis Cache for future users
+        try {
+            await redis.set(cacheKey, parsedData);
+        } catch (cacheSetErr) {
+            console.error("Redis Cache Write Error:", cacheSetErr);
+        }
+
+        res.json(parsedData);
+    } catch (err) {
+        console.error("Gemini Sentence Error:", err);
+        res.status(500).json({ error: "Sentence analysis failed" });
     }
+});
 
     // 2. The AI Prompt for Deep Grammar Analysis (Strict Grammar Teacher Mode)
     const promptText = `Act as a strict, expert German grammar teacher. Analyze this text: "${cleanSentence}".
