@@ -10,8 +10,12 @@
 </head>
 <body>
   <main class="app-container">
-<header class="top-header fade-in">
-      <h1 class="app-title">Das Wort</h1>
+	<header class="top-header fade-in">
+      <div class="brand-container" style="display: flex; align-items: center; gap: 12px;">
+        <img src="/logo.png" alt="Das Wort Logo" style="width: 45px; height: 45px; object-fit: contain;">
+        <h1 class="app-title" style="margin: 0; font-size: 1.5rem;">Das Wort</h1>
+      </div>
+      
       <button id="menuToggleBtn" class="hamburger-btn" aria-label="Menü öffnen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
@@ -102,10 +106,22 @@
       </div>
 
       <div class="central-right">
-        <div class="central-image-container">
-           <div id="mainImageShimmer" class="image-shimmer shimmer" style="display: none;"></div>
-           <img id="centralImage" class="dynamic-image" src="/logo.png" alt="Visual Context">
+        
+        <div id="tipOfTheDay" class="tip-of-the-day-card fade-in">
+           <div class="tip-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
+                <path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1.45.62 2.76 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path>
+              </svg>
+              <h3>Tipp des Tages</h3>
+           </div>
+           <p id="tipText">Lade Tipp...</p>
         </div>
+
+        <div id="imageContainer" class="central-image-container" style="display: none;">
+           <div id="mainImageShimmer" class="image-shimmer shimmer" style="display: none;"></div>
+           <img id="centralImage" class="dynamic-image" src="" alt="Visual Context" style="display: none;">
+        </div>
+
       </div>
 	  <div id="sentenceAnalysisArea" class="sentence-analysis-area hidden"></div>
     </section>

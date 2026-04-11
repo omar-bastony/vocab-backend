@@ -1,4 +1,17 @@
-// data.js - Alle Lernmaterialien (Nur auf Deutsch)
+// ==========================================
+// DAILY GRAMMAR TIPS
+// ==========================================
+const dailyTips = [
+    "Nomen werden im Deutschen immer großgeschrieben! (z.B. der <b>A</b>pfel, das <b>A</b>uto)",
+    "Verben auf '-en' enden in der 'ich'-Form meist auf '-e' (ich spiel<b>e</b>, ich lach<b>e</b>).",
+    "Das Verb 'sein' ist unregelmäßig: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie sind.",
+    "Fragesätze beginnen oft mit dem Verb: <b>Gehst</b> du nach Hause?",
+    "Nach den Verben 'helfen', 'danken' und 'gefallen' steht immer der <b>Dativ</b>!",
+    "Adjektive stehen vor dem Nomen und passen sich an (ein <b>großer</b> Hund).",
+    "Zusammengesetzte Nomen haben den Artikel des letzten Wortes (das Haus + die Tür = <b>die Haustür</b>).",
+    "Der Plural von Nomen ist oft unregelmäßig. Lerne ihn direkt mit! (der Apfel -> die <b>Äpfel</b>)"
+];
+
 
 const materialData = {
     nomen: {

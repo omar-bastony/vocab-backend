@@ -7,6 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const translationGrid = document.getElementById('translationGrid');
   const wordDetailsArea = document.getElementById('wordDetailsArea');
   
+  // Pick a random tip and display it immediately
+  const tipText = document.getElementById('tipText');
+  if(tipText && typeof dailyTips !== 'undefined') {
+      tipText.innerHTML = dailyTips[Math.floor(Math.random() * dailyTips.length)];
+  }
+  
 // --- UI Elements & Dropdowns ---
   const langMenuBtn = document.getElementById('langMenuBtn');
   const langDropdown = document.getElementById('langDropdown');
@@ -352,10 +358,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
         // 🧠 SENTENCE ANALYSIS MODE
         // ==========================================
-        const centralImg = document.getElementById('centralImage');
-            centralImg.src = 'logo.png'; // Resets to your default placeholder
-            centralImg.style.display = 'block';
-        document.getElementById('mainImageShimmer').style.display = 'none';
+        
+        // 📍 NEW: Ensure the Tip of the Day stays visible for sentences
+        document.getElementById('imageContainer').style.display = 'none';
+        document.getElementById('tipOfTheDay').style.display = 'flex';
+        
         translationGrid.innerHTML = '';
         
         // Add Shimmers for Sentence Translation Cards
@@ -475,13 +482,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } else {
         // ==========================================
-        // 🍎 SINGLE WORD MODE (Your Original Logic)
+        // 🍎 SINGLE WORD MODE
         // ==========================================
         wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
         
         document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2.2rem; width: 50%; border-radius: 4px;"></div>';
         document.getElementById('grammarTips').innerHTML = '';
         document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
+        
+        // 📍 NEW: Hide the tip, show the image container & shimmer
+        document.getElementById('tipOfTheDay').style.display = 'none';
+        document.getElementById('imageContainer').style.display = 'block';
         document.getElementById('centralImage').style.display = 'none';
         document.getElementById('mainImageShimmer').style.display = 'block';
 
