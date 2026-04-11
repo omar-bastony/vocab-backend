@@ -189,7 +189,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
     const cleanSentence = sentence.trim();
     if (cleanSentence.length > 200) return res.status(400).json({ error: "Sentence too long." });
 
-    const cacheKey = `sentence:v3:${cleanSentence.toLowerCase()}`;
+    const cacheKey = `sentence:v4:${cleanSentence.toLowerCase()}`;
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) return res.json(cachedData);
