@@ -238,26 +238,37 @@ app.post('/api/analyze-sentence', async (req, res) => {
     3. 'errorAnalysis' MUST be an array of short strings representing your step-by-step logic.`;
 
     try {
-        // 1. Hardcoded, clean URL string to guarantee no hidden formatting characters
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
         
-        // DEBUG: This will print the exact URL to your Vercel logs (with a hidden API key for safety)
-        console.log("Attempting Gemini API Call to URL:", url.replace(process.env.GEMINI_API_KEY, 'HIDDEN_KEY'));
+        let response;
+        let retries = 3;
+        
+        // --- NEW: Retry Logic ---
+        while (retries > 0) {
+            response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }],
+                    generationConfig: { 
+                        temperature: 0.1,
+                        responseMimeType: "application/json" 
+                    }
+                })
+            });
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { 
-                    temperature: 0.1,
-                    responseMimeType: "application/json" 
-                }
-            })
-        });
+            if (response.status === 503) {
+                console.log(`Google API is busy (503). Retrying in 1.5 seconds... (${retries} attempts left)`);
+                retries--;
+                if (retries === 0) throw new Error("Google API is currently overloaded. Please try again later.");
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5 seconds before asking again
+            } else {
+                // If it's a 200 OK, or a different error like 404, break the loop
+                break; 
+            }
+        }
         
         if (!response.ok) {
-            // This will grab Google's exact error message (e.g. "Model not found") to tell us WHY it failed
             const errorBody = await response.text(); 
             throw new Error(`Gemini API Error: ${response.status} - Details: ${errorBody}`);
         }
@@ -274,7 +285,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
         res.json(parsedData);
     } catch (err) {
         console.error("Gemini Sentence Error Breakdown:", err.message);
-        res.status(500).json({ error: "Sentence analysis failed" });
+        res.status(500).json({ error: "Sentence analysis failed due to high AI traffic. Try again in a few seconds." });
     }
 });
 
