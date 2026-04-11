@@ -195,7 +195,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
         return res.status(400).json({ error: "Sentence too long. Please enter a shorter sentence." });
     }
 
-    const cacheKey = `sentence:v2:${cleanSentence.toLowerCase()}`;
+    const cacheKey = `sentence:v3:${cleanSentence.toLowerCase()}`;
 
     try {
         const cachedData = await redis.get(cacheKey);
@@ -216,18 +216,17 @@ app.post('/api/analyze-sentence', async (req, res) => {
       "wasCorrected": true,
       "correctedSentence": "The grammatically perfect German sentence based on your analysis.",
       "fullTranslations": {
-        "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "...", 
-        "Amharic": "...", "Tigrinya": "...", "Spanish": "...", "French": "...", "Turkish": "...", 
-        "Ukrainian": "...", "Somali": "...", "Armenian": "..."
+        "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "..." 
       },
-      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH. Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
+      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH.",
       "wordBreakdown": [
         {
           "word": "The exact word as it appears in the CORRECTED sentence",
           "baseForm": "The dictionary form of the word",
           "pos": "Choose exactly one: noun, verb, article, pronoun, adjective, preposition, or other",
-          "englishMeaning": "Direct English translation of this specific word in context",
-          "grammarTip": "Ein winziger Grammatik-Hinweis auf DEUTSCH (z.B. '1. Person Singular', 'Dativ')."
+          "englishMeaning": "Direct English translation of this word in context",
+          "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'. If the word does not have a case (like a verb or adverb), return exactly null.",
+          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. '1. Person Singular', 'Plural'). Do NOT include the case here anymore."
         }
       ]
     }
@@ -235,7 +234,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
     CRITICAL RULES FOR JSON VALIDITY: 
     1. Do NOT use double quotes (") inside any of your text values. Use single quotes (') instead.
     2. Do NOT use raw line breaks (\\n) within strings.
-    3. 'errorAnalysis' MUST be an array of short strings representing your step-by-step logic.`;
+    3. 'errorAnalysis' MUST be an array of short strings.`;
 
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;

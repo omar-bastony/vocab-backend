@@ -372,12 +372,25 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             html += `<div class="word-cards-container">`;
             data.wordBreakdown.forEach(item => {
+                
+                // 1. Handle the standard grammar tip
                 const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
+                
+                // 2. NEW: Safely generate the Case Badge using your existing CSS classes
+                let caseBadgeHtml = '';
+                if (item.kasus && item.kasus !== "null") {
+                    // Convert "Dativ" to "dativ" to match your CSS class: .case-dativ
+                    const safeCaseName = item.kasus.toLowerCase().trim();
+                    caseBadgeHtml = `<div class="case-badge case-${safeCaseName}" style="margin-top: 8px;">${item.kasus}</div>`;
+                }
+
+                // 3. Inject the badge right above the grammar tip
                 html += `
                 <div class="word-card" data-pos="${item.pos}" data-base="${item.baseForm}">
                   <div class="wc-word">${item.word}</div>
                   <div class="wc-meaning">${item.englishMeaning}</div>
                   <div class="wc-pos">${item.pos}</div>
+                  ${caseBadgeHtml}
                   ${tipHtml}
                 </div>`;
             });
