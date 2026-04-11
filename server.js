@@ -420,6 +420,12 @@ app.post('/api/translate-sentence', async (req, res) => {
     try {
         let translations = {};
         const apiKey = process.env.DEEPL_API_KEY;
+		
+		// 📍 NEW SAFETY CHECK: Prevent the server from crashing if the key is missing
+        if (!apiKey) {
+            console.error("CRITICAL: DEEPL_API_KEY is missing from environment variables!");
+            return res.status(500).json({ error: "Translation service is temporarily unconfigured." });
+        }
         
         // DeepL has two different URLs depending on if you have a Free (:fx) or Pro account
         const isFreeApi = apiKey.endsWith(':fx');
