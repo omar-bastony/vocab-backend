@@ -470,14 +470,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add Click Listeners to Word Cards for quick-search
                 sentenceArea.querySelectorAll('.word-card').forEach(card => {
                     card.addEventListener('click', () => {
-                        germanInput.value = card.getAttribute('data-base');
+                        // 📍 FIX: Define newWord first so the counter can measure its length
+                        const newWord = card.getAttribute('data-base'); 
+                        
+                        germanInput.value = newWord;
                         germanInput.style.height = 'auto';
-						if (typeof clearInputBtn !== 'undefined') clearInputBtn.classList.add('visible');
+                        
+                        if (typeof clearInputBtn !== 'undefined') clearInputBtn.classList.add('visible');
+                        
                         const counter = document.getElementById('charCounter');
                         if (counter) {
                             counter.innerText = `${newWord.length} / 200`;
                             counter.style.color = '#888';
                         }
+                        
                         translateBtn.click(); 
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
