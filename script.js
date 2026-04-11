@@ -403,10 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Setup the "Thinking" UI for the Grammar Section immediately
         if (sentenceArea) {
             sentenceArea.innerHTML = `
-            <div class="grammar-explanation-box fade-in" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
-              <div class="shimmer" style="height: 60px; width: 60px; border-radius: 50%; margin-bottom: 1rem;"></div>
-              <p style="color: var(--theme-primary); font-weight: 600; font-size: 1.1rem; margin: 0;">✨ Dü analysiert die Grammatik...</p>
-              <p style="color: var(--md-sys-color-outline); font-size: 0.9rem; margin-top: 8px;">Bitte warten (ca. 1-2 Sekunden)</p>
+            <div class="fade-in" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 0.5rem; padding-left: 4px;">
+                <div class="shimmer" style="width: 18px; height: 18px; border-radius: 50%;"></div>
+                <div class="shimmer" style="height: 12px; width: 140px; border-radius: 4px;"></div>
             </div>`;
             sentenceArea.classList.remove('hidden');
         }
