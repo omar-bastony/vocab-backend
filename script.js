@@ -282,93 +282,194 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Translation Logic ---
+  // --- Translation Logic (Merged Sentence & Word Modes) ---
   translateBtn.addEventListener('click', async () => {
     const text = germanInput.value.trim();
     const selectedLangs = getSelectedLanguages();
     if (!text || selectedLangs.length === 0) return;
     
-    translateBtn.disabled = true; translateBtn.style.opacity = '0.6'; germanSpeakBtn.classList.add('hidden'); 
-    wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
+    // AUTO-DETECT: Sentence vs Single Word
+    const wordCount = text.split(/\s+/).length;
     
-    document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2.2rem; width: 50%; border-radius: 4px;"></div>';
-    document.getElementById('grammarTips').innerHTML = '';
-    document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
-    document.getElementById('centralImage').style.display = 'none';
-    document.getElementById('mainImageShimmer').style.display = 'block';
+    // Global UI Resets
+    translateBtn.disabled = true; translateBtn.style.opacity = '0.6'; germanSpeakBtn.classList.add('hidden'); 
+    umlautSuggestion.classList.add('hidden');
+    
+    const sentenceArea = document.getElementById('sentenceAnalysisArea');
+    if(sentenceArea) sentenceArea.classList.add('hidden');
 
-    translationGrid.innerHTML = '';
-    selectedLangs.forEach(() => {
-      const skeleton = document.createElement('div');
-      skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
-      translationGrid.appendChild(skeleton);
-    });
+    if (wordCount > 1) {
+        // ==========================================
+        // 🧠 SENTENCE ANALYSIS MODE
+        // ==========================================
+        wordDetailsArea.style.display = 'none';
+        document.getElementById('centralImage').style.display = 'none';
+        document.getElementById('mainImageShimmer').style.display = 'none';
+        translationGrid.innerHTML = '';
+        
+        // Add Shimmers for Sentence Translation Cards
+        selectedLangs.forEach(() => {
+          const skeleton = document.createElement('div');
+          skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
+          translationGrid.appendChild(skeleton);
+        });
 
-    try {
-      const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: text }) // Removed languages payload, backend translates all
-      });
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/analyze-sentence`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sentence: text })
+            });
+            
+            if (!res.ok) throw new Error("Sentence analysis failed");
+            const data = await res.json();
+            
+            // Build the Interactive Word Cards UI
+            let html = '';
+            if (data.wasCorrected) {
+                html += `
+                <div class="correction-alert">
+                  <strong>✨ Korrigiert:</strong>
+                  ${data.correctedSentence}
+                </div>`;
+            }
+            html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
+            html += `<div class="word-cards-container">`;
+            data.wordBreakdown.forEach(item => {
+                const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
+                html += `
+                <div class="word-card" data-pos="${item.pos}" data-base="${item.baseForm}">
+                  <div class="wc-word">${item.word}</div>
+                  <div class="wc-meaning">${item.englishMeaning}</div>
+                  <div class="wc-pos">${item.pos}</div>
+                  ${tipHtml}
+                </div>`;
+            });
+            html += `</div>`;
+            
+            if (sentenceArea) {
+                sentenceArea.innerHTML = html;
+                sentenceArea.classList.remove('hidden');
+                
+                // Add Click Listeners to Word Cards for quick-search
+                sentenceArea.querySelectorAll('.word-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        germanInput.value = card.getAttribute('data-base');
+                        germanInput.style.height = 'auto'; 
+                        translateBtn.click(); 
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+                });
+            }
 
-      if (!textRes.ok) throw new Error("Translation request failed");
-      const data = await textRes.json();
-      const germanData = data.german;
-      
-      document.body.classList.remove('theme-der', 'theme-die', 'theme-das'); 
-      if (germanData.partOfSpeech === 'noun' && germanData.article) {
-          const article = germanData.article.toLowerCase();
-          if (article === 'der') document.body.classList.add('theme-der');
-          else if (article === 'die') document.body.classList.add('theme-die');
-          else if (article === 'das') document.body.classList.add('theme-das');
-      }
+            // Render Full Sentence Translations using your original Card function!
+            translationGrid.innerHTML = ''; 
+            let delayIndex = 0;
+            
+            for (const [lang, translation] of Object.entries(data.fullTranslations)) {
+                if (selectedLangs.includes(lang)) {
+                    // Structure the data exactly how createTranslationCard expects it
+                    const mockData = {
+                        language: lang,
+                        meanings: [translation],
+                        example: "" // No example needed for full sentences
+                    };
+                    const card = createTranslationCard(mockData);
+                    card.style.animationDelay = `${delayIndex * 0.05}s`;
+                    card.classList.add('fade-in');
+                    translationGrid.appendChild(card);
+                    delayIndex++;
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;
+        } finally {
+            translateBtn.disabled = false; translateBtn.style.opacity = '1';
+        }
 
-      let titleHtml = germanData.word;
-      let grammarHtml = '';
-      let textToSpeak = germanData.word;
+    } else {
+        // ==========================================
+        // 🍎 SINGLE WORD MODE (Your Original Logic)
+        // ==========================================
+        wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
+        
+        document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2.2rem; width: 50%; border-radius: 4px;"></div>';
+        document.getElementById('grammarTips').innerHTML = '';
+        document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
+        document.getElementById('centralImage').style.display = 'none';
+        document.getElementById('mainImageShimmer').style.display = 'block';
 
-      if (germanData.partOfSpeech === 'noun' && germanData.article) {
-          titleHtml = `<span class="article">${germanData.article}</span> ${germanData.word}`;
-          textToSpeak = `${germanData.article} ${germanData.word}`; 
-          if (germanData.pluralTip) grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
-      } else if (germanData.partOfSpeech === 'verb' && germanData.conjugationTips) {
-          grammarHtml = `<span class="tip-label">Konjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
-      }
+        translationGrid.innerHTML = '';
+        selectedLangs.forEach(() => {
+          const skeleton = document.createElement('div');
+          skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
+          translationGrid.appendChild(skeleton);
+        });
 
-      document.getElementById('germanWordTitle').innerHTML = titleHtml;
-      document.getElementById('grammarTips').innerHTML = grammarHtml;
-      document.getElementById('germanExample').innerText = `"${germanData.example}"`;
-      wordDetailsArea.classList.add('slide-up');
+        try {
+          const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: text }) 
+          });
 
-      germanSpeakBtn.onclick = () => playAudio(textToSpeak, 'de-DE');
-      germanSpeakBtn.classList.remove('hidden');
+          if (!textRes.ok) throw new Error("Translation request failed");
+          const data = await textRes.json();
+          const germanData = data.german;
+          
+          document.body.classList.remove('theme-der', 'theme-die', 'theme-das'); 
+          if (germanData.partOfSpeech === 'noun' && germanData.article) {
+              const article = germanData.article.toLowerCase();
+              if (article === 'der') document.body.classList.add('theme-der');
+              else if (article === 'die') document.body.classList.add('theme-die');
+              else if (article === 'das') document.body.classList.add('theme-das');
+          }
 
-      translationGrid.innerHTML = ''; 
-      
-      // Filter the master list of translations to show only what the user selected
-      const filteredTranslations = data.translations.filter(langData => selectedLangs.includes(langData.language));
-      
-      filteredTranslations.forEach((langData, index) => {
-        const card = createTranslationCard(langData);
-        card.style.animationDelay = `${index * 0.05}s`;
-        card.classList.add('fade-in');
-        translationGrid.appendChild(card);
-      });
+          let titleHtml = germanData.word;
+          let grammarHtml = '';
+          let textToSpeak = germanData.word;
 
-// NEW: Use the AI's Safe Image Search Query to fetch classroom-appropriate images!
-// Find the English translation and Safe Query
-      const searchWord = data.safeImageSearchQuery || data.german.word;
-      
-      // NEW: Send BOTH the original German word (for caching) AND the safe query (for Unsplash)
-      const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`);
-      const imgData = await imgRes.json();
+          if (germanData.partOfSpeech === 'noun' && germanData.article) {
+              titleHtml = `<span class="article">${germanData.article}</span> ${germanData.word}`;
+              textToSpeak = `${germanData.article} ${germanData.word}`; 
+              if (germanData.pluralTip) grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
+          } else if (germanData.partOfSpeech === 'verb' && germanData.conjugationTips) {
+              grammarHtml = `<span class="tip-label">Konjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
+          }
 
-      if (imgData.imageUrl) {
-          const img = document.getElementById('centralImage'); const shimmer = document.getElementById('mainImageShimmer');
-          img.src = imgData.imageUrl;
-          img.onload = () => { img.style.display = 'block'; img.classList.add('fade-in'); shimmer.style.display = 'none'; };
-      }
-    } catch (error) {
-      translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;
-    } finally {
-      translateBtn.disabled = false; translateBtn.style.opacity = '1';
+          document.getElementById('germanWordTitle').innerHTML = titleHtml;
+          document.getElementById('grammarTips').innerHTML = grammarHtml;
+          document.getElementById('germanExample').innerText = `"${germanData.example}"`;
+          wordDetailsArea.classList.add('slide-up');
+
+          germanSpeakBtn.onclick = () => playAudio(textToSpeak, 'de-DE');
+          germanSpeakBtn.classList.remove('hidden');
+
+          translationGrid.innerHTML = ''; 
+          
+          const filteredTranslations = data.translations.filter(langData => selectedLangs.includes(langData.language));
+          
+          filteredTranslations.forEach((langData, index) => {
+            const card = createTranslationCard(langData);
+            card.style.animationDelay = `${index * 0.05}s`;
+            card.classList.add('fade-in');
+            translationGrid.appendChild(card);
+          });
+
+          const searchWord = data.safeImageSearchQuery || data.german.word;
+          
+          const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`);
+          const imgData = await imgRes.json();
+
+          if (imgData.imageUrl) {
+              const img = document.getElementById('centralImage'); const shimmer = document.getElementById('mainImageShimmer');
+              img.src = imgData.imageUrl;
+              img.onload = () => { img.style.display = 'block'; img.classList.add('fade-in'); shimmer.style.display = 'none'; };
+          }
+        } catch (error) {
+          translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;
+        } finally {
+          translateBtn.disabled = false; translateBtn.style.opacity = '1';
+        }
     }
   });
 
