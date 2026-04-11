@@ -29,22 +29,16 @@ app.get('/', (req, res) => {
 app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
 
 // =======================================================================
-// 1. AI SPELLCHECK ROUTE (Database First, Gemini Fallback)
+// 1. AI SPELLCHECK ROUTE (Database First, Groq Fallback)
 // =======================================================================
 app.post('/api/spellcheck', async (req, res) => {
     const { word } = req.body;
     if (!word || word.length < 2) return res.json({ corrected: null });
 
     const cleanWord = word.trim();
-    
-    // If the input contains a space, it's a sentence. Abort spellcheck!
-    if (cleanWord.includes(" ")) {
-        return res.json({ corrected: null });
-    }
-
     const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
 
-    // FAST PATH: Check Global Redis Cache First
+    // FAST PATH: Check the Global Redis Cache First
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData && cachedData.german && cachedData.german.word) {
@@ -59,24 +53,28 @@ app.post('/api/spellcheck', async (req, res) => {
         console.error("Redis Spellcheck Read Error:", cacheErr);
     }
 
-    // FALLBACK PATH: Ask Gemini AI
+    // FALLBACK PATH: Ask Groq AI
     const promptText = `You are a strict German A1/A2 spellchecker. Analyze the user input: "${cleanWord}". If it is perfectly spelled (IGNORING capitalization, but strictly enforcing umlauts), return exactly the string "PERFECT". If it is genuinely misspelled or missing an umlaut (e.g., 'mochte' -> 'möchte', 'apfel' -> 'Äpfel'), return ONLY the corrected word. Do NOT correct a word if the only mistake is a lowercase first letter.`;
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { temperature: 0 }
+                model: "llama-3.3-70b-versatile",
+                messages: [{ role: "user", content: promptText }],
+                temperature: 0 
             })
         });
         
         if (!response.ok) return res.json({ corrected: null });
         
         const data = await response.json();
-        const result = data.candidates[0].content.parts[0].text.trim();
+        const result = data.choices[0].message.content.trim();
         
         // UI SAFETY CATCH
         if (result.length > 25 || result.includes(" ")) {
@@ -95,7 +93,7 @@ app.post('/api/spellcheck', async (req, res) => {
 });
 
 // =======================================================================
-// 2. MAIN TRANSLATION ROUTE (Gemini Powered)
+// 2. MAIN TRANSLATION ROUTE (Groq Powered)
 // =======================================================================
 app.post('/api/translate', async (req, res) => {
     const { word } = req.body;
@@ -103,7 +101,6 @@ app.post('/api/translate', async (req, res) => {
     
     const cleanWord = word.trim();
 
-    // Prevent sentences and error messages from being translated/cached!
     if (cleanWord.length > 45 || cleanWord.split(' ').length > 4) {
         return res.status(400).json({ error: "Input too long. Please enter a single word or short phrase." });
     }
@@ -148,42 +145,42 @@ app.post('/api/translate', async (req, res) => {
     IMPORTANT: For "Dari" and "Farsi", you must provide the specific regional vocabulary used in Afghanistan (Dari) versus Iran (Farsi) if a difference exists.`;
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { 
-                    temperature: 0.1,
-                    responseMimeType: "application/json" 
-                }
+                model: "llama-3.3-70b-versatile",
+                messages: [{ role: "user", content: promptText }],
+                response_format: { type: "json_object" }, 
+                temperature: 0.1
             })
         });
         
         if (!response.ok) {
-            throw new Error(`Gemini API Error: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(`Groq API Error: ${response.status}`);
         }
 
         const data = await response.json();
+        const parsedData = JSON.parse(data.choices[0].message.content);
         
-        // Strip markdown blocks if Gemini accidentally included them
-        let rawText = data.candidates[0].content.parts[0].text;
-        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        
-        const parsedData = JSON.parse(rawText);
-        
-        try { await redis.set(cacheKey, parsedData); } catch (e) {}
+        try {
+            await redis.set(cacheKey, parsedData);
+        } catch (cacheSetErr) {}
 
         res.json(parsedData);
     } catch (err) {
-        console.error("Gemini Translation Error:", err);
+        console.error("Groq Error:", err);
         res.status(500).json({ error: "Translation failed" });
     }
 });
 
 // =======================================================================
-// 3. SENTENCE ANALYSIS ROUTE (Gemini Powered)
+// 3. SENTENCE ANALYSIS ROUTE (Gemini Powered - For deep grammar reasoning)
 // =======================================================================
 app.post('/api/analyze-sentence', async (req, res) => {
     const { sentence } = req.body;
@@ -204,7 +201,6 @@ app.post('/api/analyze-sentence', async (req, res) => {
         console.error("Redis Cache Read Error:", cacheErr);
     }
 
-    // FIX: Bulletproof JSON structure with explicit formatting rules to prevent JSON.parse crashes
     const promptText = `Act as a strict, expert German grammar teacher. Analyze this text: "${cleanSentence}".
     First, aggressively check for and FIX all spelling, capitalization, AND GRAMMAR errors. 
     CRITICAL: Pay strict attention to verb government (Kasusrektion). For example, verbs like 'helfen', 'danken', and 'gefallen' strictly require the DATIVE case. You MUST fix any wrong cases, adjective endings, or conjugations.
@@ -216,9 +212,11 @@ app.post('/api/analyze-sentence', async (req, res) => {
       "wasCorrected": true,
       "correctedSentence": "The grammatically perfect German sentence based on your analysis.",
       "fullTranslations": {
-        "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "..." 
+        "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "...", 
+        "Amharic": "...", "Tigrinya": "...", "Spanish": "...", "French": "...", "Turkish": "...", 
+        "Ukrainian": "...", "Somali": "...", "Armenian": "..."
       },
-      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH.",
+      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH. Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
       "wordBreakdown": [
         {
           "word": "The exact word as it appears in the CORRECTED sentence",
@@ -242,7 +240,6 @@ app.post('/api/analyze-sentence', async (req, res) => {
         let response;
         let retries = 3;
         
-        // --- NEW: Retry Logic ---
         while (retries > 0) {
             response = await fetch(url, {
                 method: 'POST',
@@ -257,12 +254,11 @@ app.post('/api/analyze-sentence', async (req, res) => {
             });
 
             if (response.status === 503) {
-                console.log(`Google API is busy (503). Retrying in 1.5 seconds... (${retries} attempts left)`);
+                console.log(`Google API is busy (503). Retrying... (${retries} attempts left)`);
                 retries--;
-                if (retries === 0) throw new Error("Google API is currently overloaded. Please try again later.");
-                await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5 seconds before asking again
+                if (retries === 0) throw new Error("Google API is currently overloaded.");
+                await new Promise(resolve => setTimeout(resolve, 1500)); 
             } else {
-                // If it's a 200 OK, or a different error like 404, break the loop
                 break; 
             }
         }
@@ -289,18 +285,17 @@ app.post('/api/analyze-sentence', async (req, res) => {
 });
 
 // =======================================================================
-// 4. AI STORY GENERATOR ROUTE (Gemini Powered)
+// 4. AI STORY GENERATOR ROUTE (Groq Powered)
 // =======================================================================
 app.get('/api/generate-reading', async (req, res) => {
     try {
-        const promptText = `Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal.
+        const promptText = `Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
         
-        Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
-        WICHTIG: Erfinde jedes Mal komplett NEUE Geschichten! Wähle für jeden Text ein anderes, zufälliges Thema aus dieser riesigen Auswahl: 
+        WICHTIG: Erfinde jedes Mal komplett NEUE Geschichten! Wähle für jeden Text ein anderes, zufälliges Thema aus dieser riesigen Auswahl (oder erfinde eigene verrückte Themen): 
         - Verrückte Haustiere oder sprechende Tiere
         - Lustige Missgeschicke im Alltag
         - Eine Reise in die Zukunft oder Zeitreisen
-        - Mysteriöse Entdeckungen
+        - Mysteriöse Entdeckungen im Wald oder auf dem Dachboden
         - Ungewöhnliche Berufe (z.B. UFO-Forscher, Schokoladentester)
         - Überleben in der Natur
         - Kochen von magischen oder exotischen Gerichten
@@ -332,32 +327,35 @@ app.get('/api/generate-reading', async (req, res) => {
           ]
         }`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { 
-                    temperature: 0.9,
-                    responseMimeType: "application/json" 
-                }
+                model: "llama-3.3-70b-versatile",
+                messages: [
+                    { role: "system", content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal." },
+                    { role: "user", content: promptText }
+                ],
+                response_format: { type: "json_object" }, 
+                temperature: 0.9 
             })
         });
 
-        if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`Groq API error: ${response.status}`);
+        }
 
         const data = await response.json();
-        
-        // Strip markdown formatting from the response
-        let rawText = data.candidates[0].content.parts[0].text;
-        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        
+        const rawText = data.choices[0].message.content.trim();
         const jsonResult = JSON.parse(rawText);
 
         res.json(jsonResult);
     } catch (error) {
-        console.error("Gemini Passage generation failed:", error);
+        console.error("Groq Passage generation failed:", error);
         res.status(500).json({ error: "Failed to generate reading passage" });
     }
 });
