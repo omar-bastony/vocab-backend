@@ -619,26 +619,38 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
           // 📍 PHASE 4: Fetch Example Sentence Translations (Google API)
-          fetch(`${BACKEND_URL}/api/translate-sentence`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sentence: germanData.example, targetLanguages: selectedLangs })
-          }).then(res => res.json()).then(transData => {
-              for (const [lang, translation] of Object.entries(transData.translations)) {
-                  const card = document.getElementById(`word-card-${lang}`);
-                  if (card) {
-                      const exampleEl = card.querySelector('.example-sentence');
-                      if (exampleEl) {
-                          // Silently swap the shimmer for the real translation
-                          exampleEl.style.opacity = '0';
-                          setTimeout(() => {
-                              exampleEl.innerHTML = translation;
-                              exampleEl.style.opacity = '1';
-                          }, 200);
+          if (germanData.example) {
+              fetch(`${BACKEND_URL}/api/translate-sentence`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ sentence: germanData.example, targetLanguages: selectedLangs })
+              }).then(res => {
+                  if (!res.ok) throw new Error("Translation API failed");
+                  return res.json();
+              }).then(transData => {
+                  for (const [lang, translation] of Object.entries(transData.translations)) {
+                      const card = document.getElementById(`word-card-${lang}`);
+                      if (card) {
+                          const exampleEl = card.querySelector('.example-sentence');
+                          if (exampleEl) {
+                              // Silently swap the shimmer for the real translation
+                              exampleEl.style.opacity = '0';
+                              setTimeout(() => {
+                                  exampleEl.innerHTML = translation;
+                                  exampleEl.style.opacity = '1';
+                              }, 200);
+                          }
                       }
                   }
-              }
-          });
+              }).catch(e => {
+                  console.error("Example translation failed:", e);
+                  // 📍 FAILSAFE: Remove shimmers so they don't load forever
+                  document.querySelectorAll('.example-sentence .shimmer').forEach(el => el.remove());
+              });
+          } else {
+              // 📍 FAILSAFE: Remove shimmers immediately if there is no example
+              document.querySelectorAll('.example-sentence .shimmer').forEach(el => el.remove());
+          }
 
         } catch (error) {
           translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;
