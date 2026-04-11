@@ -381,10 +381,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 correctionArea.classList.remove('hidden');
             }
             
-            // 📍 2. Build the rest of the UI (Grammar + Cards) for the bottom area
+            // 📍 2. Build the rest of the UI (Cards first, then Grammar) for the bottom area
             let html = '';
+            
+            // 1st: Open the cards container
             html += `<div class="word-cards-container">`;
-			html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             
             data.wordBreakdown.forEach(item => {
                 const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
@@ -404,7 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   ${tipHtml}
                 </div>`;
             });
+            // Close the cards container
             html += `</div>`;
+            
+            // 2nd: Add the Grammar Explanation box underneath the cards
+            html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             
             if (sentenceArea) {
                 sentenceArea.innerHTML = html;
