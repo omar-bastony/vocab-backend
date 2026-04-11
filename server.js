@@ -221,27 +221,27 @@ app.post('/api/analyze-sentence', async (req, res) => {
         console.error("Redis Cache Read Error:", cacheErr);
     }
 
-    // 2. The AI Prompt for Deep Grammar Analysis & Auto-Correction
+    // 2. The AI Prompt for Deep Grammar Analysis (GERMAN EXPLANATIONS)
     const promptText = `Analyze this German text: "${cleanSentence}".
     First, check for spelling, capitalization, and grammar errors. Then, perform a deep analysis on the CORRECTED version.
     Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "originalSentence": "${cleanSentence}",
-      "correctedSentence": "The grammatically perfect German sentence (fix casing, spelling, and grammar). If the original was already perfect, return the original here.",
+      "correctedSentence": "The grammatically perfect German sentence (fix casing, spelling, and grammar).",
       "wasCorrected": true or false,
       "fullTranslations": {
         "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "...", 
         "Amharic": "...", "Tigrinya": "...", "Spanish": "...", "French": "...", "Turkish": "...", 
         "Ukrainian": "...", "Somali": "...", "Armenian": "..."
       },
-      "grammarExplanation": "A simple 1-2 sentence explanation of the main grammar rule happening in the corrected sentence (e.g., why a specific case or tense is used).",
+      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH (1-2 Sätze).",
       "wordBreakdown": [
         {
           "word": "The exact word as it appears in the CORRECTED sentence",
-          "baseForm": "The dictionary form of the word (e.g., 'kaufen' for 'kaufe', 'ein' for 'einen')",
+          "baseForm": "The dictionary form of the word",
           "pos": "Choose exactly one: noun, verb, article, pronoun, adjective, preposition, or other",
-          "englishMeaning": "Direct translation of this specific word in context",
-          "grammarTip": "A tiny grammar note (e.g., '1st person singular', 'Accusative masculine'). Return null if not needed."
+          "englishMeaning": "Direct English translation of this specific word in context",
+          "grammarTip": "Ein winziger Grammatik-Hinweis auf DEUTSCH (z.B. '1. Person Singular', 'Akkusativ Maskulin'). Gib null zurück, wenn nicht nötig."
         }
       ]
     }

@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Translation Logic ---
-translateBtn.addEventListener('click', async () => {
+  translateBtn.addEventListener('click', async () => {
     const inputText = germanInput.value.trim();
     if (!inputText) return;
 
@@ -318,7 +318,7 @@ translateBtn.addEventListener('click', async () => {
             // Build the UI
             let html = '';
             
-            // 1. Show Correction Alert if the AI fixed their grammar
+            // Show Correction Alert if the AI fixed their grammar
             if (data.wasCorrected) {
                 html += `
                 <div class="correction-alert">
@@ -327,10 +327,10 @@ translateBtn.addEventListener('click', async () => {
                 </div>`;
             }
 
-            // 2. Show Grammar Explanation
-            html += `<div class="grammar-explanation-box">💡 <b>Grammar Note:</b> ${data.grammarExplanation}</div>`;
+            // Show Grammar Explanation (Now in German!)
+            html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
 
-            // 3. Build the Interactive Word Cards
+            // Build the Interactive Word Cards
             html += `<div class="word-cards-container">`;
             data.wordBreakdown.forEach(item => {
                 const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
@@ -344,9 +344,8 @@ translateBtn.addEventListener('click', async () => {
             });
             html += `</div>`;
 
-            // 4. Inject Full Sentence Translations into the normal grid
+            // Inject Full Sentence Translations into the normal grid
             let transHtml = '';
-            // Only show languages the user has checked!
             const selectedLangs = Array.from(document.querySelectorAll('.lang-checkbox:checked')).map(cb => cb.value);
             for (const [lang, translation] of Object.entries(data.fullTranslations)) {
                 if (selectedLangs.includes(lang)) {
@@ -363,10 +362,9 @@ translateBtn.addEventListener('click', async () => {
             sentenceArea.classList.remove('hidden');
             translationGrid.innerHTML = transHtml;
 
-            // 5. Add Click Listeners to the Word Cards (The Magic Context Feature)
+            // Add Click Listeners to the Word Cards
             document.querySelectorAll('.word-card').forEach(card => {
                 card.addEventListener('click', () => {
-                    // When clicked, put the dictionary base form into the input and trigger a normal translation!
                     const baseWord = card.getAttribute('data-base');
                     germanInput.value = baseWord;
                     translateBtn.click(); // Automatically run the single-word search!
@@ -374,19 +372,59 @@ translateBtn.addEventListener('click', async () => {
                 });
             });
 
-            // (Optional) Hide the image shimmer since sentences don't fetch images
+            // Hide the image shimmer since sentences don't fetch images
             document.getElementById('mainImageShimmer').style.display = 'none';
 
         } else {
             // ==========================================
-            // 🍎 SINGLE WORD MODE (Your existing logic)
+            // 🍎 SINGLE WORD MODE (Your Existing Logic)
             // ==========================================
+            const res = await fetch(`${BACKEND_URL}/api/translate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: inputText })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            // Apply Article Theme (der/die/das)
+            document.body.className = '';
+            if (data.german && data.german.article) {
+                document.body.classList.add(`theme-${data.german.article.toLowerCase()}`);
+            }
+
+            // Render Translation Cards based on checkboxes
+            const selectedLangs = Array.from(document.querySelectorAll('.lang-checkbox:checked')).map(cb => cb.value);
+            data.translations.forEach(langData => {
+                if (selectedLangs.includes(langData.language)) {
+                    translationGrid.appendChild(createTranslationCard(langData));
+                }
+            });
+
+            // Render Word Details (Plural, Conjugation, Example)
+            let detailsHtml = '';
+            if (data.german.article) detailsHtml += `<p><strong>Artikel:</strong> ${data.german.article}</p>`;
+            if (data.german.pluralTip) detailsHtml += `<p><strong>Plural:</strong> ${data.german.pluralTip}</p>`;
+            if (data.german.conjugationTips) detailsHtml += `<p><strong>Konjugation:</strong> ${data.german.conjugationTips}</p>`;
+            if (data.german.example) detailsHtml += `<p><strong>Beispiel:</strong> <em>${data.german.example}</em></p>`;
+            wordDetailsArea.innerHTML = detailsHtml;
             wordDetailsArea.classList.remove('hidden');
-            // ... (PASTE YOUR EXISTING SINGLE WORD FETCH LOGIC HERE, 
-            // specifically everything from `const res = await fetch('/api/translate'...)`
-            // down to rendering the `translationGrid.appendChild(card)`) ...
-            
-            // Note: Make sure to copy your existing Unsplash image fetch code here too!
+
+            // Fetch the contextual Image from Unsplash
+            const searchWord = data.safeImageSearchQuery || data.german.word;
+            const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`);
+            const imgData = await imgRes.json();
+
+            if (imgData.imageUrl) {
+                const img = document.getElementById('centralImage');
+                const shimmer = document.getElementById('mainImageShimmer');
+                img.src = imgData.imageUrl;
+                img.onload = () => { 
+                    img.style.display = 'block'; 
+                    img.classList.add('fade-in'); 
+                    shimmer.style.display = 'none'; 
+                };
+            }
         }
     } catch (error) {
         console.error("Error:", error);
