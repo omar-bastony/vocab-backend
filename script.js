@@ -291,6 +291,11 @@ document.addEventListener('DOMContentLoaded', () => {
         counter.style.color = val.length >= 200 ? '#ba1a1a' : '#888'; 
     }
 	
+	// 📍 NEW: If the user typed a space, it's a sentence. Abort the spellcheck entirely!
+    if (val.includes(' ')) {
+        return; 
+    }
+	
     if (val.length >= 3) {
       typingTimer = setTimeout(() => checkWordSuggestionAI(val), doneTypingInterval);
     }
@@ -426,25 +431,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Render Full Sentence Translations using your original Card function!
-            translationGrid.innerHTML = ''; 
-            let delayIndex = 0;
+            // 📍 NEW: Fetch translations using the CORRECTED sentence from your cheaper API
+            const finalSentenceToTranslate = data.wasCorrected ? data.correctedSentence : text;
             
-            for (const [lang, translation] of Object.entries(data.fullTranslations)) {
-                if (selectedLangs.includes(lang)) {
-                    // Structure the data exactly how createTranslationCard expects it
-                    const mockData = {
-                        language: lang,
-                        meanings: [translation],
-                        example: "" // No example needed for full sentences
-                    };
-                    const card = createTranslationCard(mockData);
-                    card.style.animationDelay = `${delayIndex * 0.05}s`;
-                    card.classList.add('fade-in');
-                    translationGrid.appendChild(card);
-                    delayIndex++;
+            try {
+                const transRes = await fetch(`${BACKEND_URL}/api/translate-sentence`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        sentence: finalSentenceToTranslate, 
+                        targetLanguages: selectedLangs 
+                    })
+                });
+                
+                if (transRes.ok) {
+                    const transData = await transRes.json();
+                    translationGrid.innerHTML = ''; 
+                    let delayIndex = 0;
+                    
+                    for (const [lang, translation] of Object.entries(transData.translations)) {
+                        const mockData = {
+                            language: lang,
+                            meanings: [translation],
+                            example: "" 
+                        };
+                        const card = createTranslationCard(mockData);
+                        card.style.animationDelay = `${delayIndex * 0.05}s`;
+                        card.classList.add('fade-in');
+                        translationGrid.appendChild(card);
+                        delayIndex++;
+                    }
                 }
+            } catch (e) {
+                console.error("Secondary translation failed:", e);
             }
+
         } catch (error) {
             console.error(error);
             translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;

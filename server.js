@@ -211,11 +211,6 @@ app.post('/api/analyze-sentence', async (req, res) => {
       "errorAnalysis": ["Schritt 1: Welches Verb?", "Schritt 2: Welcher Kasus?", "Schritt 3: Fehler im Original?"],
       "wasCorrected": true,
       "correctedSentence": "The grammatically perfect German sentence based on your analysis.",
-      "fullTranslations": {
-        "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "...", 
-        "Amharic": "...", "Tigrinya": "...", "Spanish": "...", "French": "...", "Turkish": "...", 
-        "Ukrainian": "...", "Somali": "...", "Armenian": "..."
-      },
       "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH. Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
       "wordBreakdown": [
         {
@@ -224,7 +219,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
           "pos": "Choose exactly one: noun, verb, article, pronoun, adjective, preposition, or other",
           "englishMeaning": "Direct English translation of this word in context",
           "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'. If the word does not have a case (like a verb or adverb), return exactly null.",
-          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. '1. Person Singular', 'Plural'). Do NOT include the case here anymore."
+          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. '1. Person Singular', 'Plural'). Do NOT include the case here."
         }
       ]
     }
@@ -397,6 +392,87 @@ app.get('/api/image', async (req, res) => {
         res.json(getFallback(germanWord));
     }
 });
+
+// =======================================================================
+// 6. NEW: DEDICATED SENTENCE TRANSLATION ROUTE (Cheap/Free API)
+// =======================================================================
+
+
+// 1. Map your frontend language names to DeepL's official ISO codes
+const deeplLangMap = {
+    'English': 'EN-US',
+    'Arabic': 'AR',
+    'Russian': 'RU',
+    'Spanish': 'ES',
+    'French': 'FR',
+    'Turkish': 'TR',
+    'Ukrainian': 'UK'
+    // Dari, Farsi, Amharic, Tigrinya, Somali, and Armenian are currently unsupported by DeepL
+};
+
+app.post('/api/translate-sentence', async (req, res) => {
+    const { sentence, targetLanguages } = req.body;
+    
+    if (!sentence || !targetLanguages || targetLanguages.length === 0) {
+        return res.status(400).json({ error: "Missing sentence or target languages" });
+    }
+
+    try {
+        let translations = {};
+        const apiKey = process.env.DEEPL_API_KEY;
+        
+        // DeepL has two different URLs depending on if you have a Free (:fx) or Pro account
+        const isFreeApi = apiKey.endsWith(':fx');
+        const baseUrl = isFreeApi ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
+
+        // 2. Fetch all translations simultaneously using Promise.all
+        await Promise.all(targetLanguages.map(async (lang) => {
+            const targetLangCode = deeplLangMap[lang];
+
+            // If the user selected a language DeepL doesn't support, handle it gracefully
+            if (!targetLangCode) {
+                translations[lang] = `Translation for ${lang} is currently unsupported by our provider.`;
+                return;
+            }
+
+            try {
+                const response = await fetch(baseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `DeepL-Auth-Key ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: [sentence],
+                        target_lang: targetLangCode
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    translations[lang] = data.translations[0].text;
+                } else {
+                    console.error(`DeepL Error for ${lang}: ${response.status}`);
+                    translations[lang] = "Translation error.";
+                }
+            } catch (e) {
+                console.error(`DeepL Fetch Failed for ${lang}:`, e);
+                translations[lang] = "Translation failed.";
+            }
+        }));
+
+        res.json({ translations });
+    } catch (err) {
+        console.error("DeepL Master Error:", err);
+        res.status(500).json({ error: "Translation failed completely" });
+    }
+});
+
+
+
+
+
+
 
 // --- VERCEL EXPORT ---
 if (process.env.NODE_ENV !== 'production') {
