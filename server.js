@@ -238,7 +238,12 @@ app.post('/api/analyze-sentence', async (req, res) => {
     3. 'errorAnalysis' MUST be an array of short strings representing your step-by-step logic.`;
 
     try {
+        // 1. Hardcoded, clean URL string to guarantee no hidden formatting characters
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        
+        // DEBUG: This will print the exact URL to your Vercel logs (with a hidden API key for safety)
+        console.log("Attempting Gemini API Call to URL:", url.replace(process.env.GEMINI_API_KEY, 'HIDDEN_KEY'));
+
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -251,11 +256,14 @@ app.post('/api/analyze-sentence', async (req, res) => {
             })
         });
         
-        if (!response.ok) throw new Error(`Gemini API Error: ${response.status}`);
+        if (!response.ok) {
+            // This will grab Google's exact error message (e.g. "Model not found") to tell us WHY it failed
+            const errorBody = await response.text(); 
+            throw new Error(`Gemini API Error: ${response.status} - Details: ${errorBody}`);
+        }
 
         const data = await response.json();
         
-        // Strip markdown blocks if Gemini accidentally included them
         let rawText = data.candidates[0].content.parts[0].text;
         rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
         
@@ -265,8 +273,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
 
         res.json(parsedData);
     } catch (err) {
-        // This will now log the exact error to your terminal if it ever fails again
-        console.error("Gemini Sentence Error Breakdown:", err);
+        console.error("Gemini Sentence Error Breakdown:", err.message);
         res.status(500).json({ error: "Sentence analysis failed" });
     }
 });
