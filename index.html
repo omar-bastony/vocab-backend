@@ -6,7 +6,7 @@
   <title>A1-A2 Kontext-Übersetzer</title>
   <script defer src="/_vercel/insights/script.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=1.1">
 </head>
 <body>
   <main class="app-container">
@@ -78,7 +78,7 @@
           <div class="m3-textfield">
             <textarea id="germanInput" placeholder=" " maxlength="200" rows="1"></textarea>
 			<div id="charCounter" style="text-align: right; font-size: 0.75rem; color: #888; margin-top: 4px;">0 / 200</div>
-            <label for="germanInput">Deutsches Wort</label>
+            <label for="germanInput">Deutsches Wort/Satz</label>
           </div>
           <button id="translateBtn" class="m3-button">Übersetzen</button>
         </div>
@@ -97,7 +97,6 @@
           <div id="grammarTips" class="grammar-tips"></div>
           <p id="germanExample" class="german-example"></p>
         </div>
-		<div id="sentenceAnalysisArea" class="sentence-analysis-area hidden"></div>
       </div>
 
       <div class="central-right">
@@ -106,6 +105,7 @@
            <img id="centralImage" class="dynamic-image" src="/logo.png" alt="Visual Context">
         </div>
       </div>
+	  <div id="sentenceAnalysisArea" class="sentence-analysis-area hidden"></div>
     </section>
 
     <section class="output-section">
@@ -137,6 +137,6 @@
   </div>
 
   <script src="data.js"></script>
-  <script src="script.js"></script>
+  <script src="script.js?v=1.1"></script>
 </body>
 </html>

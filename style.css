@@ -120,7 +120,7 @@ body {
 
 /* --- Central Box & Input --- */
 .central-box {
-  display: flex; flex-direction: row; 
+  display: flex; flex-direction: row; flex-wrap: wrap;
   background-color: var(--theme-box-bg);
   border-radius: var(--border-radius-large); padding: 1.5rem; gap: 2rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04); flex-shrink: 0;
@@ -496,6 +496,7 @@ html, body {
 }
 
 .sentence-analysis-area {
+	width: 100%;
   margin-top: 1.5rem;
   display: flex;
   flex-direction: column;
