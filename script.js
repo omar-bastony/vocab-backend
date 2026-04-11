@@ -346,8 +346,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   suggestionText.addEventListener('click', () => {
-    germanInput.value = suggestionText.textContent;
+    const newWord = suggestionText.textContent;
+    germanInput.value = newWord;
     germanInput.style.height = 'auto'; 
+    
+    // 📍 NEW: Manually show the 'X' button and update the counter
+    if (typeof clearInputBtn !== 'undefined') clearInputBtn.classList.add('visible');
+    const counter = document.getElementById('charCounter');
+    if (counter) {
+        counter.innerText = `${newWord.length} / 200`;
+        counter.style.color = '#888';
+    }
+
     umlautSuggestion.classList.add('hidden');
     translateBtn.click(); 
   });
@@ -461,7 +471,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 sentenceArea.querySelectorAll('.word-card').forEach(card => {
                     card.addEventListener('click', () => {
                         germanInput.value = card.getAttribute('data-base');
-                        germanInput.style.height = 'auto'; 
+                        germanInput.style.height = 'auto';
+						if (typeof clearInputBtn !== 'undefined') clearInputBtn.classList.add('visible');
+                        const counter = document.getElementById('charCounter');
+                        if (counter) {
+                            counter.innerText = `${newWord.length} / 200`;
+                            counter.style.color = '#888';
+                        }
                         translateBtn.click(); 
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
