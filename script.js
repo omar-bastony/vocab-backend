@@ -332,6 +332,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const sentenceArea = document.getElementById('sentenceAnalysisArea');
     if(sentenceArea) sentenceArea.classList.add('hidden');
+	
+	// FIX: Force the Word Details area to hide on every new search
+	wordDetailsArea.style.display = 'none';
+	
+	// NEW FIX: Strip away gender themes to return to the default neutral colors
+    document.body.classList.remove('theme-der', 'theme-die', 'theme-das');
 
     if (wordCount > 1) {
         // ==========================================
