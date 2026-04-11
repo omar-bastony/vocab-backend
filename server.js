@@ -374,7 +374,7 @@ const googleLangMap = {
     'English': 'en',
     'Arabic': 'ar',
     'Russian': 'ru',
-    'Dari': 'prs',  // Google recently added official support for Afghan Persian
+    'Dari': 'fa-AF',  
     'Farsi': 'fa',
     'Amharic': 'am',
     'Tigrinya': 'ti',
