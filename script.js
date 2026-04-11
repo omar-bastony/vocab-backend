@@ -383,8 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 📍 2. Build the rest of the UI (Grammar + Cards) for the bottom area
             let html = '';
-            html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             html += `<div class="word-cards-container">`;
+			html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             
             data.wordBreakdown.forEach(item => {
                 const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
