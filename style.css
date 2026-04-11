@@ -142,8 +142,7 @@ body {
 .m3-textfield label {
   position: absolute; top: 0.9rem; left: 1rem; color: var(--md-sys-color-outline); pointer-events: none;
   transition: 0.2s ease all, background-color 0.6s ease, color 0.4s ease; 
-  /*background: transparent; */padding: 0 4px;
-  background-color: var(--theme-box-bg);
+  background: transparent; padding: 0 4px;
 }
 .m3-textfield textarea:focus ~ label, .m3-textfield textarea:not(:placeholder-shown) ~ label {
   top: -0.6rem; font-size: 0.85rem; color: var(--theme-primary); font-weight: 500;
@@ -343,11 +342,10 @@ max-width: 100%;
   .modal-content { padding: 1.5rem; width: 95%; max-height: 90vh; }
   .modal-title { font-size: 1.5rem; }
   .main-word { font-size: 1.8rem; }
-  
-  .central-right { 
-    display: none !important; 
+  /* 📍 NEW: Only hide the right column on mobile IF the app is in sentence mode */
+  body.sentence-mode .central-right { 
+    display: none; 
   }
-  
 }
 
 /* --- Modal Actions & Reading Texts --- */

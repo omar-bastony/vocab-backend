@@ -353,12 +353,17 @@ document.addEventListener('DOMContentLoaded', () => {
 	// 📍 NEW: Hide the correction area on new search
     const correctionArea = document.getElementById('correctionArea');
     if(correctionArea) correctionArea.classList.add('hidden');
+	
+	// 📍 NEW: Reset the mode state on every new search
+    document.body.classList.remove('sentence-mode');
 
     if (wordCount > 1) {
         // ==========================================
         // 🧠 SENTENCE ANALYSIS MODE
         // ==========================================
         
+		document.body.classList.add('sentence-mode');
+		
         // 📍 NEW: Ensure the Tip of the Day stays visible for sentences
         document.getElementById('imageContainer').style.display = 'none';
         document.getElementById('tipOfTheDay').style.display = 'flex';
