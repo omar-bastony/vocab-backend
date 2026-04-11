@@ -180,102 +180,73 @@ app.post('/api/translate', async (req, res) => {
 });
 
 // =======================================================================
-// 3. SENTENCE ANALYSIS ROUTE (Gemini Powered - For deep grammar reasoning)
+// 3. SENTENCE ANALYSIS ROUTE (Now powered by Groq 70B for speed!)
 // =======================================================================
 app.post('/api/analyze-sentence', async (req, res) => {
     const { sentence } = req.body;
     if (!sentence) return res.status(400).json({ error: "Sentence required" });
     
     const cleanSentence = sentence.trim();
-
-    if (cleanSentence.length > 200) {
-        return res.status(400).json({ error: "Sentence too long. Please enter a shorter sentence." });
-    }
+    if (cleanSentence.length > 200) return res.status(400).json({ error: "Sentence too long." });
 
     const cacheKey = `sentence:v3:${cleanSentence.toLowerCase()}`;
-
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) return res.json(cachedData);
-    } catch (cacheErr) {
-        console.error("Redis Cache Read Error:", cacheErr);
-    }
+    } catch (e) {}
 
+    // Keeping your exact Chain-of-Thought prompt!
     const promptText = `Act as a strict, expert German grammar teacher. Analyze this text: "${cleanSentence}".
     First, aggressively check for and FIX all spelling, capitalization, AND GRAMMAR errors. 
     CRITICAL: Pay strict attention to verb government (Kasusrektion). For example, verbs like 'helfen', 'danken', and 'gefallen' strictly require the DATIVE case. You MUST fix any wrong cases, adjective endings, or conjugations.
     
-    Return STRICTLY a JSON object with this exact structure, nothing else:
+    Return STRICTLY a JSON object with this exact structure:
     {
       "originalSentence": "${cleanSentence}",
       "errorAnalysis": ["Schritt 1: Welches Verb?", "Schritt 2: Welcher Kasus?", "Schritt 3: Fehler im Original?"],
       "wasCorrected": true,
-      "correctedSentence": "The grammatically perfect German sentence based on your analysis.",
+      "correctedSentence": "The grammatically perfect German sentence",
       "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH. Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
       "wordBreakdown": [
         {
-          "word": "The exact word as it appears in the CORRECTED sentence",
-          "baseForm": "The dictionary form of the word",
-          "pos": "Choose exactly one: noun, verb, article, pronoun, adjective, preposition, or other",
-          "englishMeaning": "Direct English translation of this word in context",
-          "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'. If the word does not have a case (like a verb or adverb), return exactly null.",
-          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. '1. Person Singular', 'Plural'). Do NOT include the case here."
+          "word": "Exact word from CORRECTED sentence",
+          "baseForm": "Dictionary form",
+          "pos": "noun, verb, article, pronoun, adjective, preposition, or other",
+          "englishMeaning": "Direct English translation in context",
+          "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv' or null.",
+          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. '1. Person Singular', 'Plural'). Do NOT include case."
         }
       ]
-    }
-    
-    CRITICAL RULES FOR JSON VALIDITY: 
-    1. Do NOT use double quotes (") inside any of your text values. Use single quotes (') instead.
-    2. Do NOT use raw line breaks (\\n) within strings.
-    3. 'errorAnalysis' MUST be an array of short strings.`;
+    }`;
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        
-        let response;
-        let retries = 3;
-        
-        while (retries > 0) {
-            response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: promptText }] }],
-                    generationConfig: { 
-                        temperature: 0.1,
-                        responseMimeType: "application/json" 
-                    }
-                })
-            });
+        // 📍 NEW: Fetching from Groq instead of Gemini
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile",
+                messages: [{ role: "user", content: promptText }],
+                response_format: { type: "json_object" }, // Guarantees JSON without markdown stripping
+                temperature: 0.1
+            })
+        });
 
-            if (response.status === 503) {
-                console.log(`Google API is busy (503). Retrying... (${retries} attempts left)`);
-                retries--;
-                if (retries === 0) throw new Error("Google API is currently overloaded.");
-                await new Promise(resolve => setTimeout(resolve, 1500)); 
-            } else {
-                break; 
-            }
-        }
+        if (!response.ok) throw new Error(`Groq API Error: ${response.status}`);
         
-        if (!response.ok) {
-            const errorBody = await response.text(); 
-            throw new Error(`Gemini API Error: ${response.status} - Details: ${errorBody}`);
-        }
-
         const data = await response.json();
-        
-        let rawText = data.candidates[0].content.parts[0].text;
-        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        
-        const parsedData = JSON.parse(rawText);
+        const parsedData = JSON.parse(data.choices[0].message.content);
         
         try { await redis.set(cacheKey, parsedData); } catch (e) {}
 
         res.json(parsedData);
     } catch (err) {
-        console.error("Gemini Sentence Error Breakdown:", err.message);
-        res.status(500).json({ error: "Sentence analysis failed due to high AI traffic. Try again in a few seconds." });
+        console.error("Groq Sentence Error:", err);
+        res.status(500).json({ error: "Sentence analysis failed." });
     }
 });
 

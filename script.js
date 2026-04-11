@@ -394,18 +394,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (wordCount > 1) {
         // ==========================================
-        // 🧠 SENTENCE ANALYSIS MODE
+        // 🧠 PROGRESSIVE SENTENCE ANALYSIS MODE
         // ==========================================
-        
-		document.body.classList.add('sentence-mode');
-		
-        // 📍 NEW: Ensure the Tip of the Day stays visible for sentences
+        document.body.classList.add('sentence-mode');
         document.getElementById('imageContainer').style.display = 'none';
         document.getElementById('tipOfTheDay').style.display = 'flex';
         
+        // 1. Setup the "Thinking" UI for the Grammar Section immediately
+        if (sentenceArea) {
+            sentenceArea.innerHTML = `
+            <div class="grammar-explanation-box fade-in" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
+              <div class="shimmer" style="height: 60px; width: 60px; border-radius: 50%; margin-bottom: 1rem;"></div>
+              <p style="color: var(--theme-primary); font-weight: 600; font-size: 1.1rem; margin: 0;">✨ Dü analysiert die Grammatik...</p>
+              <p style="color: var(--md-sys-color-outline); font-size: 0.9rem; margin-top: 8px;">Bitte warten (ca. 1-2 Sekunden)</p>
+            </div>`;
+            sentenceArea.classList.remove('hidden');
+        }
+
         translationGrid.innerHTML = '';
-        
-        // Add Shimmers for Sentence Translation Cards
         selectedLangs.forEach(() => {
           const skeleton = document.createElement('div');
           skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
@@ -413,6 +419,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         try {
+            // 📍 PHASE 1: INSTANT TRANSLATION (Using the user's raw input)
+            // Fire this off immediately so the user has something to read.
+            fetch(`${BACKEND_URL}/api/translate-sentence`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sentence: text, targetLanguages: selectedLangs })
+            }).then(res => res.json()).then(transData => {
+                translationGrid.innerHTML = ''; 
+                let delayIndex = 0;
+                for (const [lang, translation] of Object.entries(transData.translations)) {
+                    const card = createTranslationCard({ language: lang, meanings: [translation], example: "" });
+                    card.style.animationDelay = `${delayIndex * 0.05}s`;
+                    card.classList.add('fade-in');
+                    // Add an ID to the translation text so we can easily update it later if needed
+                    card.querySelector('.translated-word').id = `trans-text-${lang}`;
+                    translationGrid.appendChild(card);
+                    delayIndex++;
+                }
+            }).catch(e => console.error("Initial translation failed:", e));
+
+
+            // 📍 PHASE 2: BACKGROUND GRAMMAR ANALYSIS (Groq)
             const res = await fetch(`${BACKEND_URL}/api/analyze-sentence`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -423,31 +451,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             // Build the Interactive Word Cards UI
-            // 📍 1. Handle the Correction Alert Separately (Left Column)
             if (data.wasCorrected && correctionArea) {
                 correctionArea.innerHTML = `
-                <div class="correction-alert">
+                <div class="correction-alert fade-in">
                   <strong>✨ Korrigiert:</strong>
                   ${data.correctedSentence}
                 </div>`;
                 correctionArea.classList.remove('hidden');
             }
             
-            // 📍 2. Build the rest of the UI (Cards first, then Grammar) for the bottom area
-            let html = '';
-            
-            // 1st: Open the cards container
-            html += `<div class="word-cards-container">`;
-            
+            let html = `<div class="word-cards-container fade-in">`;
             data.wordBreakdown.forEach(item => {
                 const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
-                
                 let caseBadgeHtml = '';
                 if (item.kasus && item.kasus !== "null") {
                     const safeCaseName = item.kasus.toLowerCase().trim();
                     caseBadgeHtml = `<div class="case-badge case-${safeCaseName}" style="margin-top: 8px;">${item.kasus}</div>`;
                 }
-
                 html += `
                 <div class="word-card" data-pos="${item.pos}" data-base="${item.baseForm}">
                   <div class="wc-word">${item.word}</div>
@@ -457,72 +477,46 @@ document.addEventListener('DOMContentLoaded', () => {
                   ${tipHtml}
                 </div>`;
             });
-            // Close the cards container
             html += `</div>`;
-            
-            // 2nd: Add the Grammar Explanation box underneath the cards
-            html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
+            html += `<div class="grammar-explanation-box fade-in">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             
             if (sentenceArea) {
                 sentenceArea.innerHTML = html;
-                sentenceArea.classList.remove('hidden');
-                
-                // Add Click Listeners to Word Cards for quick-search
                 sentenceArea.querySelectorAll('.word-card').forEach(card => {
                     card.addEventListener('click', () => {
-                        // 📍 FIX: Define newWord first so the counter can measure its length
-                        const newWord = card.getAttribute('data-base'); 
-                        
+                        const newWord = card.getAttribute('data-base');
                         germanInput.value = newWord;
                         germanInput.style.height = 'auto';
-                        
                         if (typeof clearInputBtn !== 'undefined') clearInputBtn.classList.add('visible');
-                        
                         const counter = document.getElementById('charCounter');
-                        if (counter) {
-                            counter.innerText = `${newWord.length} / 200`;
-                            counter.style.color = '#888';
-                        }
-                        
+                        if (counter) { counter.innerText = `${newWord.length} / 200`; counter.style.color = '#888'; }
                         translateBtn.click(); 
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
                 });
             }
 
-            // 📍 NEW: Fetch translations using the CORRECTED sentence from your cheaper API
-            const finalSentenceToTranslate = data.wasCorrected ? data.correctedSentence : text;
-            
-            try {
-                const transRes = await fetch(`${BACKEND_URL}/api/translate-sentence`, {
+            // 📍 PHASE 3: THE SILENT UPDATE
+            // If Groq actually corrected the grammar, we quietly fetch a new translation 
+            // and swap the text on the screen without blinking the UI.
+            if (data.wasCorrected) {
+                fetch(`${BACKEND_URL}/api/translate-sentence`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        sentence: finalSentenceToTranslate, 
-                        targetLanguages: selectedLangs 
-                    })
-                });
-                
-                if (transRes.ok) {
-                    const transData = await transRes.json();
-                    translationGrid.innerHTML = ''; 
-                    let delayIndex = 0;
-                    
+                    body: JSON.stringify({ sentence: data.correctedSentence, targetLanguages: selectedLangs })
+                }).then(res => res.json()).then(transData => {
                     for (const [lang, translation] of Object.entries(transData.translations)) {
-                        const mockData = {
-                            language: lang,
-                            meanings: [translation],
-                            example: "" 
-                        };
-                        const card = createTranslationCard(mockData);
-                        card.style.animationDelay = `${delayIndex * 0.05}s`;
-                        card.classList.add('fade-in');
-                        translationGrid.appendChild(card);
-                        delayIndex++;
+                        const textElement = document.getElementById(`trans-text-${lang}`);
+                        if (textElement && textElement.innerText !== translation) {
+                            // Briefly fade out, update text, fade back in
+                            textElement.style.opacity = '0';
+                            setTimeout(() => {
+                                textElement.innerText = translation;
+                                textElement.style.opacity = '1';
+                            }, 200);
+                        }
                     }
-                }
-            } catch (e) {
-                console.error("Secondary translation failed:", e);
+                });
             }
 
         } catch (error) {
