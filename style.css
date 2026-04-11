@@ -575,3 +575,48 @@ html, body {
 .word-card[data-pos="article"] { border-top-color: var(--pos-article); }
 .word-card[data-pos="pronoun"] { border-top-color: var(--pos-pronoun); }
 .word-card[data-pos="preposition"] { border-top-color: var(--pos-preposition); }
+
+/* =========================================
+   GRAMMAR TABLES & CASE BADGES
+========================================= */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto; /* Makes tables scrollable on small phones! */
+}
+
+.grammar-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.grammar-table th, .grammar-table td {
+  border: 1px solid var(--theme-border-light);
+  padding: 0.8rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.grammar-table th {
+  background-color: var(--md-sys-color-surface);
+  font-weight: 700;
+}
+
+/* The Pill Badges for Cases */
+.case-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Specific Case Colors */
+.case-nominativ { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+.case-akkusativ { background-color: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+.case-dativ     { background-color: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
+.case-genitiv   { background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }

@@ -172,16 +172,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } else if (type === 'adjektive' || type === 'verben') {
         const data = materialData[type];
-        let html = `<p>${data.description}</p><table class="grammar-table"><thead><tr>`;
-        data.headers.forEach(h => html += `<th>${h}</th>`);
+        
+        // Added a responsive wrapper so it doesn't break mobile screens
+        let html = `<p>${data.description}</p><div class="table-responsive"><table class="grammar-table"><thead><tr>`;
+        
+        // 1. Color-code the headers to match your gender themes (der/die/das)
+        data.headers.forEach(h => {
+            let headerStyle = '';
+            if (h.includes('der')) headerStyle = 'color: #00658F;';
+            else if (h.includes('die') && !h.includes('Plural')) headerStyle = 'color: #9C4150;';
+            else if (h.includes('das')) headerStyle = 'color: #386A20;';
+            
+            html += `<th style="${headerStyle}">${h}</th>`;
+        });
         html += `</tr></thead><tbody>`;
         
+        // 2. Loop through the rows and turn cases into colorful Badges!
         data.items.forEach(row => {
           html += `<tr>`;
-          Object.values(row).forEach(val => html += `<td>${val}</td>`);
+          Object.values(row).forEach((val, index) => {
+              
+            // Check if this column is the first one, and if it's a Case name
+            const isCase = ['Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'].includes(val);
+            
+            if (index === 0 && isCase) {
+                // Apply the exact badge class (e.g., "case-nominativ")
+                html += `<td><span class="case-badge case-${val.toLowerCase()}">${val}</span></td>`;
+            } else {
+                html += `<td>${val}</td>`;
+            }
+            
+          });
           html += `</tr>`;
         });
-        html += `</tbody></table>`;
+        
+        html += `</tbody></table></div>`;
         openModal(data.title, html, false);
       }
     });
