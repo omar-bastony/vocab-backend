@@ -481,3 +481,97 @@ html, body {
   margin-top: 0.5rem;
   border-radius: var(--border-radius-medium);
 }
+
+/* =========================================
+   SENTENCE ANALYSIS & WORD CARDS 
+========================================= */
+:root {
+  --pos-verb: #E74C3C;       /* Red for Action */
+  --pos-noun: #9B59B6;       /* Purple for Objects */
+  --pos-adjective: #F39C12;  /* Orange for Descriptions */
+  --pos-article: #3498DB;    /* Blue for Articles */
+  --pos-pronoun: #2980B9;    /* Dark Blue for Pronouns */
+  --pos-preposition: #1ABC9C;/* Teal for Connections */
+  --pos-other: #7F8C8D;      /* Gray for everything else */
+}
+
+.sentence-analysis-area {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.correction-alert {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 1rem;
+  border-radius: var(--border-radius-medium);
+  border-left: 5px solid #ffeeba;
+  font-size: 0.95rem;
+}
+
+.correction-alert strong { font-size: 1.1rem; display: block; margin-bottom: 0.3rem;}
+
+.grammar-explanation-box {
+  background-color: var(--md-sys-color-surface);
+  border: 1px solid var(--theme-border-light);
+  padding: 1rem;
+  border-radius: var(--border-radius-medium);
+  font-style: italic;
+  color: var(--theme-primary);
+}
+
+/* The Grid for the Word Cards */
+.word-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+/* Individual Interactive Word Card */
+.word-card {
+  background: white;
+  border: 1px solid var(--theme-border-light);
+  border-radius: var(--border-radius-medium);
+  padding: 0.8rem 1rem;
+  min-width: 120px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  cursor: pointer; /* Makes it look clickable! */
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-top: 4px solid var(--pos-other); /* Default top border */
+}
+
+.word-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background-color: var(--theme-light-hover);
+}
+
+/* Card Content Styling */
+.wc-word { font-weight: 700; font-size: 1.2rem; color: #333; margin-bottom: 0.2rem; }
+.wc-meaning { font-size: 0.9rem; color: #666; margin-bottom: 0.4rem; }
+.wc-pos { 
+  font-size: 0.7rem; 
+  text-transform: uppercase; 
+  letter-spacing: 0.5px;
+  background: #eee;
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: #555;
+}
+.wc-grammar { font-size: 0.8rem; color: #888; margin-top: 0.4rem; font-style: italic; }
+
+/* Dynamic POS Top Borders */
+.word-card[data-pos="verb"] { border-top-color: var(--pos-verb); }
+.word-card[data-pos="noun"] { border-top-color: var(--pos-noun); }
+.word-card[data-pos="adjective"] { border-top-color: var(--pos-adjective); }
+.word-card[data-pos="article"] { border-top-color: var(--pos-article); }
+.word-card[data-pos="pronoun"] { border-top-color: var(--pos-pronoun); }
+.word-card[data-pos="preposition"] { border-top-color: var(--pos-preposition); }

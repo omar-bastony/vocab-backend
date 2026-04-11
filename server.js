@@ -34,6 +34,12 @@ app.post('/api/spellcheck', async (req, res) => {
     if (!word || word.length < 2) return res.json({ corrected: null });
 
     const cleanWord = word.trim();
+    
+    // NEW: If the input contains a space, it's a sentence. Abort spellcheck!
+    if (cleanWord.includes(" ")) {
+        return res.json({ corrected: null });
+    }
+
     const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
 
     // 1. FAST PATH: Check the Global Redis Cache First!
@@ -190,6 +196,96 @@ app.post('/api/translate', async (req, res) => {
         res.status(500).json({ error: "Translation failed" });
     }
 });
+
+// --- SENTENCE ANALYSIS ROUTE (With Auto-Correction) ---
+app.post('/api/analyze-sentence', async (req, res) => {
+    const { sentence } = req.body;
+    if (!sentence) return res.status(400).json({ error: "Sentence required" });
+    
+    const cleanSentence = sentence.trim();
+
+    // Security Bouncer: Limit sentence length to prevent abuse (max ~20-30 words)
+    if (cleanSentence.length > 200) {
+        return res.status(400).json({ error: "Sentence too long. Please enter a shorter sentence." });
+    }
+
+    const cacheKey = `sentence:all:${cleanSentence.toLowerCase()}`;
+
+    // 1. Check Global Redis Cache First
+    try {
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData) {
+            return res.json(cachedData);
+        }
+    } catch (cacheErr) {
+        console.error("Redis Cache Read Error:", cacheErr);
+    }
+
+    // 2. The AI Prompt for Deep Grammar Analysis & Auto-Correction
+    const promptText = `Analyze this German text: "${cleanSentence}".
+    First, check for spelling, capitalization, and grammar errors. Then, perform a deep analysis on the CORRECTED version.
+    Return STRICTLY a JSON object with this exact structure, nothing else:
+    {
+      "originalSentence": "${cleanSentence}",
+      "correctedSentence": "The grammatically perfect German sentence (fix casing, spelling, and grammar). If the original was already perfect, return the original here.",
+      "wasCorrected": true or false,
+      "fullTranslations": {
+        "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "...", 
+        "Amharic": "...", "Tigrinya": "...", "Spanish": "...", "French": "...", "Turkish": "...", 
+        "Ukrainian": "...", "Somali": "...", "Armenian": "..."
+      },
+      "grammarExplanation": "A simple 1-2 sentence explanation of the main grammar rule happening in the corrected sentence (e.g., why a specific case or tense is used).",
+      "wordBreakdown": [
+        {
+          "word": "The exact word as it appears in the CORRECTED sentence",
+          "baseForm": "The dictionary form of the word (e.g., 'kaufen' for 'kaufe', 'ein' for 'einen')",
+          "pos": "Choose exactly one: noun, verb, article, pronoun, adjective, preposition, or other",
+          "englishMeaning": "Direct translation of this specific word in context",
+          "grammarTip": "A tiny grammar note (e.g., '1st person singular', 'Accusative masculine'). Return null if not needed."
+        }
+      ]
+    }
+    IMPORTANT: The "wordBreakdown" array must contain an object for EVERY single word in the CORRECTED sentence in chronological order.`;
+
+    try {
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile",
+                messages: [{ role: "user", content: promptText }],
+                response_format: { type: "json_object" }, 
+                temperature: 0.1
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("🔥 Groq API Rejected Sentence Analysis:", JSON.stringify(errorData));
+            throw new Error(`Groq API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const parsedData = JSON.parse(data.choices[0].message.content);
+        
+        // Save to Global Redis Cache for future users
+        try {
+            await redis.set(cacheKey, parsedData);
+        } catch (cacheSetErr) {
+            console.error("Redis Cache Write Error:", cacheSetErr);
+        }
+
+        res.json(parsedData);
+    } catch (err) {
+        console.error("Groq Sentence Error:", err);
+        res.status(500).json({ error: "Sentence analysis failed" });
+    }
+});
+
 
 // --- AI STORY GENERATOR ROUTE (Powered by Groq) ---
 app.get('/api/generate-reading', async (req, res) => {

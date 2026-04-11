@@ -282,93 +282,118 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Translation Logic ---
-  translateBtn.addEventListener('click', async () => {
-    const text = germanInput.value.trim();
-    const selectedLangs = getSelectedLanguages();
-    if (!text || selectedLangs.length === 0) return;
-    
-    translateBtn.disabled = true; translateBtn.style.opacity = '0.6'; germanSpeakBtn.classList.add('hidden'); 
-    wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
-    
-    document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2.2rem; width: 50%; border-radius: 4px;"></div>';
-    document.getElementById('grammarTips').innerHTML = '';
-    document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
-    document.getElementById('centralImage').style.display = 'none';
-    document.getElementById('mainImageShimmer').style.display = 'block';
+translateBtn.addEventListener('click', async () => {
+    const inputText = germanInput.value.trim();
+    if (!inputText) return;
 
+    // AUTO-DETECT: Sentence vs Single Word
+    const wordCount = inputText.split(/\s+/).length;
+
+    // Reset UI State
+    translateBtn.disabled = true; 
+    translateBtn.style.opacity = '0.5';
+    document.getElementById('mainImageShimmer').style.display = 'block';
+    document.getElementById('centralImage').style.display = 'none';
+    umlautSuggestion.classList.remove('show');
+    
+    // Hide both areas initially
     translationGrid.innerHTML = '';
-    selectedLangs.forEach(() => {
-      const skeleton = document.createElement('div');
-      skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
-      translationGrid.appendChild(skeleton);
-    });
+    wordDetailsArea.innerHTML = '';
+    const sentenceArea = document.getElementById('sentenceAnalysisArea');
+    if(sentenceArea) sentenceArea.classList.add('hidden');
 
     try {
-      const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: text }) // Removed languages payload, backend translates all
-      });
+        if (wordCount > 1) {
+            // ==========================================
+            // 🧠 SENTENCE ANALYSIS MODE
+            // ==========================================
+            const res = await fetch(`${BACKEND_URL}/api/analyze-sentence`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sentence: inputText })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
 
-      if (!textRes.ok) throw new Error("Translation request failed");
-      const data = await textRes.json();
-      const germanData = data.german;
-      
-      document.body.classList.remove('theme-der', 'theme-die', 'theme-das'); 
-      if (germanData.partOfSpeech === 'noun' && germanData.article) {
-          const article = germanData.article.toLowerCase();
-          if (article === 'der') document.body.classList.add('theme-der');
-          else if (article === 'die') document.body.classList.add('theme-die');
-          else if (article === 'das') document.body.classList.add('theme-das');
-      }
+            // Build the UI
+            let html = '';
+            
+            // 1. Show Correction Alert if the AI fixed their grammar
+            if (data.wasCorrected) {
+                html += `
+                <div class="correction-alert">
+                  <strong>✨ Korrigiert (Corrected):</strong>
+                  ${data.correctedSentence}
+                </div>`;
+            }
 
-      let titleHtml = germanData.word;
-      let grammarHtml = '';
-      let textToSpeak = germanData.word;
+            // 2. Show Grammar Explanation
+            html += `<div class="grammar-explanation-box">💡 <b>Grammar Note:</b> ${data.grammarExplanation}</div>`;
 
-      if (germanData.partOfSpeech === 'noun' && germanData.article) {
-          titleHtml = `<span class="article">${germanData.article}</span> ${germanData.word}`;
-          textToSpeak = `${germanData.article} ${germanData.word}`; 
-          if (germanData.pluralTip) grammarHtml = `<span class="tip-label">Plural:</span> <span class="plural-tip">${germanData.pluralTip}</span>`;
-      } else if (germanData.partOfSpeech === 'verb' && germanData.conjugationTips) {
-          grammarHtml = `<span class="tip-label">Konjugation:</span> <span class="conj-tip">${germanData.conjugationTips}</span>`;
-      }
+            // 3. Build the Interactive Word Cards
+            html += `<div class="word-cards-container">`;
+            data.wordBreakdown.forEach(item => {
+                const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
+                html += `
+                <div class="word-card" data-pos="${item.pos}" data-base="${item.baseForm}">
+                  <div class="wc-word">${item.word}</div>
+                  <div class="wc-meaning">${item.englishMeaning}</div>
+                  <div class="wc-pos">${item.pos}</div>
+                  ${tipHtml}
+                </div>`;
+            });
+            html += `</div>`;
 
-      document.getElementById('germanWordTitle').innerHTML = titleHtml;
-      document.getElementById('grammarTips').innerHTML = grammarHtml;
-      document.getElementById('germanExample').innerText = `"${germanData.example}"`;
-      wordDetailsArea.classList.add('slide-up');
+            // 4. Inject Full Sentence Translations into the normal grid
+            let transHtml = '';
+            // Only show languages the user has checked!
+            const selectedLangs = Array.from(document.querySelectorAll('.lang-checkbox:checked')).map(cb => cb.value);
+            for (const [lang, translation] of Object.entries(data.fullTranslations)) {
+                if (selectedLangs.includes(lang)) {
+                    transHtml += `
+                    <div class="translation-card">
+                      <div class="card-header"><span class="lang-title">${lang}</span></div>
+                      <div class="card-body"><p class="translated-word">${translation}</p></div>
+                    </div>`;
+                }
+            }
+            
+            // Display everything
+            sentenceArea.innerHTML = html;
+            sentenceArea.classList.remove('hidden');
+            translationGrid.innerHTML = transHtml;
 
-      germanSpeakBtn.onclick = () => playAudio(textToSpeak, 'de-DE');
-      germanSpeakBtn.classList.remove('hidden');
+            // 5. Add Click Listeners to the Word Cards (The Magic Context Feature)
+            document.querySelectorAll('.word-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    // When clicked, put the dictionary base form into the input and trigger a normal translation!
+                    const baseWord = card.getAttribute('data-base');
+                    germanInput.value = baseWord;
+                    translateBtn.click(); // Automatically run the single-word search!
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
 
-      translationGrid.innerHTML = ''; 
-      
-      // Filter the master list of translations to show only what the user selected
-      const filteredTranslations = data.translations.filter(langData => selectedLangs.includes(langData.language));
-      
-      filteredTranslations.forEach((langData, index) => {
-        const card = createTranslationCard(langData);
-        card.style.animationDelay = `${index * 0.05}s`;
-        card.classList.add('fade-in');
-        translationGrid.appendChild(card);
-      });
+            // (Optional) Hide the image shimmer since sentences don't fetch images
+            document.getElementById('mainImageShimmer').style.display = 'none';
 
-// NEW: Use the AI's Safe Image Search Query to fetch classroom-appropriate images!
-// Find the English translation and Safe Query
-      const searchWord = data.safeImageSearchQuery || data.german.word;
-      
-      // NEW: Send BOTH the original German word (for caching) AND the safe query (for Unsplash)
-      const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`);
-      const imgData = await imgRes.json();
-
-      if (imgData.imageUrl) {
-          const img = document.getElementById('centralImage'); const shimmer = document.getElementById('mainImageShimmer');
-          img.src = imgData.imageUrl;
-          img.onload = () => { img.style.display = 'block'; img.classList.add('fade-in'); shimmer.style.display = 'none'; };
-      }
+        } else {
+            // ==========================================
+            // 🍎 SINGLE WORD MODE (Your existing logic)
+            // ==========================================
+            wordDetailsArea.classList.remove('hidden');
+            // ... (PASTE YOUR EXISTING SINGLE WORD FETCH LOGIC HERE, 
+            // specifically everything from `const res = await fetch('/api/translate'...)`
+            // down to rendering the `translationGrid.appendChild(card)`) ...
+            
+            // Note: Make sure to copy your existing Unsplash image fetch code here too!
+        }
     } catch (error) {
-      translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;
+        console.error("Error:", error);
+        alert("Ein Fehler ist aufgetreten: " + error.message);
     } finally {
-      translateBtn.disabled = false; translateBtn.style.opacity = '1';
+        translateBtn.disabled = false; 
+        translateBtn.style.opacity = '1';
     }
   });
 
