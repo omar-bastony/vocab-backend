@@ -146,8 +146,9 @@ body {
 }
 .m3-textfield textarea:focus ~ label, .m3-textfield textarea:not(:placeholder-shown) ~ label {
   top: -0.6rem; font-size: 0.85rem; color: var(--theme-primary); font-weight: 500;
-  /background: var(--md-sys-color-surface); border-radius: 4px;
+  background: var(--md-sys-color-surface); border-radius: 4px;
 }
+
 
 .m3-button {
   background-color: var(--theme-primary); color: var(--md-sys-color-on-primary);
