@@ -190,18 +190,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Loop through the rows and turn cases into colorful Badges!
         data.items.forEach(row => {
           html += `<tr>`;
-          Object.values(row).forEach((val, index) => {
-              
-            // Check if this column is the first one, and if it's a Case name
-            const isCase = ['Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'].includes(val);
+          Object.values(row).forEach(val => {
+            // FIX: Convert to string and trim spaces to guarantee a match
+            const strVal = String(val).trim();
+            const isCase = ['Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'].includes(strVal);
             
-            if (index === 0 && isCase) {
-                // Apply the exact badge class (e.g., "case-nominativ")
-                html += `<td><span class="case-badge case-${val.toLowerCase()}">${val}</span></td>`;
+            if (isCase) {
+                // Apply the exact badge class dynamically
+                html += `<td><span class="case-badge case-${strVal.toLowerCase()}">${strVal}</span></td>`;
             } else {
                 html += `<td>${val}</td>`;
             }
-            
           });
           html += `</tr>`;
         });
@@ -281,6 +280,15 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(typingTimer);
     umlautSuggestion.classList.add('hidden');
     const val = this.value.trim();
+	
+	// NEW: Update Character Counter
+    const counter = document.getElementById('charCounter');
+    if (counter) {
+        counter.innerText = `${val.length} / 200`;
+        // Turn it red if they hit the limit
+        counter.style.color = val.length >= 200 ? '#ba1a1a' : '#888'; 
+    }
+	
     if (val.length >= 3) {
       typingTimer = setTimeout(() => checkWordSuggestionAI(val), doneTypingInterval);
     }
@@ -327,8 +335,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
         // 🧠 SENTENCE ANALYSIS MODE
         // ==========================================
-        wordDetailsArea.style.display = 'none';
-        document.getElementById('centralImage').style.display = 'none';
+        const centralImg = document.getElementById('centralImage');
+            centralImg.src = 'logo.png'; // Resets to your default placeholder
+            centralImg.style.display = 'block';
         document.getElementById('mainImageShimmer').style.display = 'none';
         translationGrid.innerHTML = '';
         

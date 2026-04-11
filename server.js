@@ -221,31 +221,32 @@ app.post('/api/analyze-sentence', async (req, res) => {
         console.error("Redis Cache Read Error:", cacheErr);
     }
 
-    // 2. The AI Prompt for Deep Grammar Analysis (GERMAN EXPLANATIONS)
-    const promptText = `Analyze this German text: "${cleanSentence}".
-    First, check for spelling, capitalization, and grammar errors. Then, perform a deep analysis on the CORRECTED version.
+    // 2. The AI Prompt for Deep Grammar Analysis (Strict Grammar Teacher Mode)
+    const promptText = `Act as a strict, expert German grammar teacher. Analyze this text: "${cleanSentence}".
+    First, aggressively check for and FIX all spelling, capitalization, AND GRAMMAR errors. 
+    CRITICAL: Pay strict attention to verb government (Kasusrektion). For example, verbs like "helfen", "danken", and "gefallen" strictly require the DATIVE case (e.g., "Hilf mir", NOT "Hilf mich"). You MUST fix any wrong cases, adjective endings, or conjugations.
+    
     Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "originalSentence": "${cleanSentence}",
-      "correctedSentence": "The grammatically perfect German sentence (fix casing, spelling, and grammar).",
+      "correctedSentence": "The grammatically perfect German sentence.",
       "wasCorrected": true or false,
       "fullTranslations": {
         "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "...", 
         "Amharic": "...", "Tigrinya": "...", "Spanish": "...", "French": "...", "Turkish": "...", 
         "Ukrainian": "...", "Somali": "...", "Armenian": "..."
       },
-      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH (1-2 Sätze).",
+      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH (1-2 Sätze). Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
       "wordBreakdown": [
         {
           "word": "The exact word as it appears in the CORRECTED sentence",
           "baseForm": "The dictionary form of the word",
           "pos": "Choose exactly one: noun, verb, article, pronoun, adjective, preposition, or other",
           "englishMeaning": "Direct English translation of this specific word in context",
-          "grammarTip": "Ein winziger Grammatik-Hinweis auf DEUTSCH (z.B. '1. Person Singular', 'Akkusativ Maskulin'). Gib null zurück, wenn nicht nötig."
+          "grammarTip": "Ein winziger Grammatik-Hinweis auf DEUTSCH (z.B. '1. Person Singular', 'Dativ'). Gib null zurück, wenn nicht nötig."
         }
       ]
-    }
-    IMPORTANT: The "wordBreakdown" array must contain an object for EVERY single word in the CORRECTED sentence in chronological order.`;
+    }`;
 
     try {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
