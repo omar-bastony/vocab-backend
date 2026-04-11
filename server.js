@@ -195,7 +195,6 @@ app.post('/api/analyze-sentence', async (req, res) => {
         return res.status(400).json({ error: "Sentence too long. Please enter a shorter sentence." });
     }
 
-    // FIX 1: Change the cache key to 'v2' to bust the old, incorrect Redis cache entries
     const cacheKey = `sentence:v2:${cleanSentence.toLowerCase()}`;
 
     try {
@@ -205,35 +204,38 @@ app.post('/api/analyze-sentence', async (req, res) => {
         console.error("Redis Cache Read Error:", cacheErr);
     }
 
-    // FIX 2: Re-ordered JSON schema to force "Chain of Thought" reasoning
+    // FIX: Bulletproof JSON structure with explicit formatting rules to prevent JSON.parse crashes
     const promptText = `Act as a strict, expert German grammar teacher. Analyze this text: "${cleanSentence}".
     First, aggressively check for and FIX all spelling, capitalization, AND GRAMMAR errors. 
-    CRITICAL: Pay strict attention to verb government (Kasusrektion). For example, verbs like "helfen", "danken", and "gefallen" strictly require the DATIVE case (e.g., "Hilf mir", NOT "Hilf mich"). You MUST fix any wrong cases, adjective endings, or conjugations.
+    CRITICAL: Pay strict attention to verb government (Kasusrektion). For example, verbs like 'helfen', 'danken', and 'gefallen' strictly require the DATIVE case. You MUST fix any wrong cases, adjective endings, or conjugations.
     
     Return STRICTLY a JSON object with this exact structure, nothing else:
     {
       "originalSentence": "${cleanSentence}",
-      "errorAnalysis": "Denke hier Schritt-für-Schritt nach. Welche Verben werden verwendet? Welchen Kasus verlangen sie? Gibt es Fehler im Original? (Max 2 sentences)",
-      "wasCorrected": true or false,
-      "correctedSentence": "The grammatically perfect German sentence based on your errorAnalysis.",
+      "errorAnalysis": ["Schritt 1: Welches Verb?", "Schritt 2: Welcher Kasus?", "Schritt 3: Fehler im Original?"],
+      "wasCorrected": true,
+      "correctedSentence": "The grammatically perfect German sentence based on your analysis.",
       "fullTranslations": {
         "English": "...", "Arabic": "...", "Russian": "...", "Dari": "...", "Farsi": "...", 
         "Amharic": "...", "Tigrinya": "...", "Spanish": "...", "French": "...", "Turkish": "...", 
         "Ukrainian": "...", "Somali": "...", "Armenian": "..."
       },
-      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH (1-2 Sätze). Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
+      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH. Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
       "wordBreakdown": [
         {
           "word": "The exact word as it appears in the CORRECTED sentence",
           "baseForm": "The dictionary form of the word",
           "pos": "Choose exactly one: noun, verb, article, pronoun, adjective, preposition, or other",
           "englishMeaning": "Direct English translation of this specific word in context",
-          "grammarTip": "Ein winziger Grammatik-Hinweis auf DEUTSCH (z.B. '1. Person Singular', 'Dativ'). Gib null zurück, wenn nicht nötig."
+          "grammarTip": "Ein winziger Grammatik-Hinweis auf DEUTSCH (z.B. '1. Person Singular', 'Dativ')."
         }
       ]
-    }`;
-
-    // ... rest of the fetch code remains the same ...
+    }
+    
+    CRITICAL RULES FOR JSON VALIDITY: 
+    1. Do NOT use double quotes (") inside any of your text values. Use single quotes (') instead.
+    2. Do NOT use raw line breaks (\\n) within strings.
+    3. 'errorAnalysis' MUST be an array of short strings representing your step-by-step logic.`;
 
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -253,7 +255,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
 
         const data = await response.json();
         
-        // Strip markdown formatting from the response
+        // Strip markdown blocks if Gemini accidentally included them
         let rawText = data.candidates[0].content.parts[0].text;
         rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
         
@@ -263,7 +265,8 @@ app.post('/api/analyze-sentence', async (req, res) => {
 
         res.json(parsedData);
     } catch (err) {
-        console.error("Gemini Sentence Error:", err);
+        // This will now log the exact error to your terminal if it ever fails again
+        console.error("Gemini Sentence Error Breakdown:", err);
         res.status(500).json({ error: "Sentence analysis failed" });
     }
 });
