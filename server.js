@@ -440,45 +440,42 @@ app.post('/api/translate-sentence', async (req, res) => {
 });
 
 // =======================================================================
-// 7. FAST GRAMMAR CORRECTION (Powered by OpenAI gpt-4o-mini)
+// 7. FAST GRAMMAR CORRECTION (Powered by Gemini 2.5 Flash-Lite)
 // =======================================================================
 app.post('/api/fast-correct', async (req, res) => {
     const { sentence } = req.body;
     if (!sentence) return res.status(400).json({ error: "Sentence required" });
 
-    const promptText = `Du bist ein strenger Deutschlehrer. Prüfe diesen Satz: "${sentence}".
-    Achte GANZ GENAU auf die Kasusrektion (z.B. 'helfen', 'danken', 'glauben' + Dativ).
-    Gibt STRIKT ein JSON-Objekt zurück:
-    {
-      "originalSentence": "${sentence}",
-      "wasCorrected": true oder false,
-      "correctedSentence": "Der grammatikalisch perfekte Satz",
-      "grammarExplanation": "Eine sehr kurze Erklärung auf Deutsch, warum du das korrigiert hast (welcher Kasus, warum?). Wenn der Satz richtig war, lobe den Schüler kurz."
-    }`;
-
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        
+        const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: "gpt-4o-mini",
-                messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" },
-                temperature: 0.1
+                system_instruction: {
+                    parts: { text: "Du bist ein strenger Deutschlehrer. Achte GANZ GENAU auf die Kasusrektion (z.B. 'helfen', 'danken', 'glauben' + Dativ)." }
+                },
+                contents: [{
+                    role: "user",
+                    parts: [{ text: `Prüfe diesen Satz: "${sentence}". Gib STRIKT ein JSON-Objekt zurück mit originalSentence, wasCorrected (boolean), correctedSentence, und grammarExplanation (kurze deutsche Erklärung).` }]
+                }],
+                generationConfig: {
+                    response_mime_type: "application/json",
+                    temperature: 0.1
+                }
             })
         });
 
-        if (!response.ok) throw new Error(`OpenAI API Error: ${response.status}`);
+        if (!response.ok) throw new Error(`Gemini Flash-Lite API Error: ${response.status}`);
         
         const data = await response.json();
-        const parsedData = JSON.parse(data.choices[0].message.content);
+        // Gemini wraps the string response in the text property, we parse it into a real JSON object
+        const parsedData = JSON.parse(data.candidates[0].content.parts[0].text);
         
         res.json(parsedData);
     } catch (err) {
-        console.error("OpenAI Correction Error:", err);
+        console.error("Flash-Lite Correction Error:", err);
         res.status(500).json({ error: "Correction failed." });
     }
 });
