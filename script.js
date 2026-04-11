@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const germanInput = document.getElementById('germanInput');
   const translationGrid = document.getElementById('translationGrid');
   const wordDetailsArea = document.getElementById('wordDetailsArea');
+  const clearInputBtn = document.getElementById('clearInputBtn');
   
   // Pick a random tip and display it immediately
   const tipText = document.getElementById('tipText');
@@ -289,6 +290,12 @@ document.addEventListener('DOMContentLoaded', () => {
     umlautSuggestion.classList.add('hidden');
     const val = this.value.trim();
 	
+	if (this.value.length > 0) {
+        clearInputBtn.classList.add('visible');
+    } else {
+        clearInputBtn.classList.remove('visible');
+    }
+	
 	// NEW: Update Character Counter
     const counter = document.getElementById('charCounter');
     if (counter) {
@@ -305,6 +312,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (val.length >= 3) {
       typingTimer = setTimeout(() => checkWordSuggestionAI(val), doneTypingInterval);
     }
+  });
+  
+  // 📍 NEW: Clear Button Logic
+  clearInputBtn.addEventListener('click', () => {
+      germanInput.value = '';
+      germanInput.style.height = 'auto'; // Shrink the textarea back down
+      germanInput.focus(); // Keep the user's cursor active
+      clearInputBtn.classList.remove('visible');
+      
+      // Reset the character counter
+      const counter = document.getElementById('charCounter');
+      if (counter) {
+          counter.innerText = `0 / 200`;
+          counter.style.color = '#888'; 
+      }
+      
+      // Hide spelling suggestions
+      umlautSuggestion.classList.add('hidden');
   });
 
   async function checkWordSuggestionAI(val) {
