@@ -460,18 +460,18 @@ app.post('/api/translate-sentence', async (req, res) => {
                     translations[lang] = data.data.translations[0].translatedText;
                 } else {
                     console.error(`Google API Error for ${lang}: ${response.status}`);
-                    translations[lang] = "Translation error.";
+                    translations[lang] = "❌ Translation error.";
                 }
             } catch (e) {
                 console.error(`Google Fetch Failed for ${lang}:`, e);
-                translations[lang] = "Translation failed.";
+                translations[lang] = "❌ Translation failed.";
             }
         }));
 
         res.json({ translations });
     } catch (err) {
         console.error("Google Master Error:", err);
-        res.status(500).json({ error: "Translation failed completely" });
+        res.status(500).json({ error: "❌ Translation failed completely" });
     }
 });
 
