@@ -338,6 +338,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// NEW FIX: Strip away gender themes to return to the default neutral colors
     document.body.classList.remove('theme-der', 'theme-die', 'theme-das');
+	
+	// 📍 NEW: Hide the correction area on new search
+    const correctionArea = document.getElementById('correctionArea');
+    if(correctionArea) correctionArea.classList.add('hidden');
 
     if (wordCount > 1) {
         // ==========================================
@@ -367,30 +371,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             // Build the Interactive Word Cards UI
-            let html = '';
-            if (data.wasCorrected) {
-                html += `
+            // 📍 1. Handle the Correction Alert Separately (Left Column)
+            if (data.wasCorrected && correctionArea) {
+                correctionArea.innerHTML = `
                 <div class="correction-alert">
                   <strong>✨ Korrigiert:</strong>
                   ${data.correctedSentence}
                 </div>`;
+                correctionArea.classList.remove('hidden');
             }
+            
+            // 📍 2. Build the rest of the UI (Grammar + Cards) for the bottom area
+            let html = '';
             html += `<div class="grammar-explanation-box">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             html += `<div class="word-cards-container">`;
+            
             data.wordBreakdown.forEach(item => {
-                
-                // 1. Handle the standard grammar tip
                 const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
                 
-                // 2. NEW: Safely generate the Case Badge using your existing CSS classes
                 let caseBadgeHtml = '';
                 if (item.kasus && item.kasus !== "null") {
-                    // Convert "Dativ" to "dativ" to match your CSS class: .case-dativ
                     const safeCaseName = item.kasus.toLowerCase().trim();
                     caseBadgeHtml = `<div class="case-badge case-${safeCaseName}" style="margin-top: 8px;">${item.kasus}</div>`;
                 }
 
-                // 3. Inject the badge right above the grammar tip
                 html += `
                 <div class="word-card" data-pos="${item.pos}" data-base="${item.baseForm}">
                   <div class="wc-word">${item.word}</div>
