@@ -393,21 +393,26 @@ app.get('/api/image', async (req, res) => {
     }
 });
 
+
 // =======================================================================
-// 6. NEW: DEDICATED SENTENCE TRANSLATION ROUTE (Cheap/Free API)
+// 6. DEDICATED SENTENCE TRANSLATION ROUTE (Google Cloud Translation API)
 // =======================================================================
 
-
-// 1. Map your frontend language names to DeepL's official ISO codes
-const deeplLangMap = {
-    'English': 'EN-US',
-    'Arabic': 'AR',
-    'Russian': 'RU',
-    'Spanish': 'ES',
-    'French': 'FR',
-    'Turkish': 'TR',
-    'Ukrainian': 'UK'
-    // Dari, Farsi, Amharic, Tigrinya, Somali, and Armenian are currently unsupported by DeepL
+// 1. Map your frontend language names to Google's official ISO codes
+const googleLangMap = {
+    'English': 'en',
+    'Arabic': 'ar',
+    'Russian': 'ru',
+    'Dari': 'prs',  // Google recently added official support for Afghan Persian
+    'Farsi': 'fa',
+    'Amharic': 'am',
+    'Tigrinya': 'ti',
+    'Spanish': 'es',
+    'French': 'fr',
+    'Turkish': 'tr',
+    'Ukrainian': 'uk',
+    'Somali': 'so',
+    'Armenian': 'hy'
 };
 
 app.post('/api/translate-sentence', async (req, res) => {
@@ -419,57 +424,53 @@ app.post('/api/translate-sentence', async (req, res) => {
 
     try {
         let translations = {};
-        const apiKey = process.env.DEEPL_API_KEY;
-		
-		// 📍 NEW SAFETY CHECK: Prevent the server from crashing if the key is missing
+        const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
+        
+        // Safety check to prevent Vercel crashes
         if (!apiKey) {
-            console.error("CRITICAL: DEEPL_API_KEY is missing from environment variables!");
+            console.error("CRITICAL: GOOGLE_TRANSLATE_API_KEY is missing from environment variables!");
             return res.status(500).json({ error: "Translation service is temporarily unconfigured." });
         }
-        
-        // DeepL has two different URLs depending on if you have a Free (:fx) or Pro account
-        const isFreeApi = apiKey.endsWith(':fx');
-        const baseUrl = isFreeApi ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
+
+        const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
 
         // 2. Fetch all translations simultaneously using Promise.all
         await Promise.all(targetLanguages.map(async (lang) => {
-            const targetLangCode = deeplLangMap[lang];
+            const targetLangCode = googleLangMap[lang];
 
-            // If the user selected a language DeepL doesn't support, handle it gracefully
             if (!targetLangCode) {
-                translations[lang] = `Translation for ${lang} is currently unsupported by our provider.`;
+                translations[lang] = "Language not mapped.";
                 return;
             }
 
             try {
-                const response = await fetch(baseUrl, {
+                const response = await fetch(url, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `DeepL-Auth-Key ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        text: [sentence],
-                        target_lang: targetLangCode
+                        q: sentence,
+                        target: targetLangCode,
+                        source: 'de', // Force source language to German to prevent mis-detections
+                        format: 'text'
                     })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    translations[lang] = data.translations[0].text;
+                    translations[lang] = data.data.translations[0].translatedText;
                 } else {
-                    console.error(`DeepL Error for ${lang}: ${response.status}`);
+                    console.error(`Google API Error for ${lang}: ${response.status}`);
                     translations[lang] = "Translation error.";
                 }
             } catch (e) {
-                console.error(`DeepL Fetch Failed for ${lang}:`, e);
+                console.error(`Google Fetch Failed for ${lang}:`, e);
                 translations[lang] = "Translation failed.";
             }
         }));
 
         res.json({ translations });
     } catch (err) {
-        console.error("DeepL Master Error:", err);
+        console.error("Google Master Error:", err);
         res.status(500).json({ error: "Translation failed completely" });
     }
 });
