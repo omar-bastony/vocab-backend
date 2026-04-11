@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } else {
             // ==========================================
-            // 🍎 SINGLE WORD MODE (Your Existing Logic)
+            // 🍎 SINGLE WORD MODE (Bulletproof Update)
             // ==========================================
             const res = await fetch(`${BACKEND_URL}/api/translate`, {
                 method: 'POST',
@@ -389,30 +389,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Apply Article Theme (der/die/das)
             document.body.className = '';
-            if (data.german && data.german.article) {
+            if (data.german && data.german.article && data.german.article !== "null") {
                 document.body.classList.add(`theme-${data.german.article.toLowerCase()}`);
             }
 
-            // Render Translation Cards based on checkboxes
-            const selectedLangs = Array.from(document.querySelectorAll('.lang-checkbox:checked')).map(cb => cb.value);
-            data.translations.forEach(langData => {
-                if (selectedLangs.includes(langData.language)) {
-                    translationGrid.appendChild(createTranslationCard(langData));
-                }
-            });
+            // Render Translation Cards
+            let selectedLangs = Array.from(document.querySelectorAll('.lang-checkbox:checked')).map(cb => cb.value);
+            
+            // 🐛 FIX 1: If no languages are selected, default to showing ALL of them!
+            if (selectedLangs.length === 0 && data.translations) {
+                selectedLangs = data.translations.map(t => t.language);
+            }
 
-            // Render Word Details (Plural, Conjugation, Example)
+            if (data.translations) {
+                data.translations.forEach(langData => {
+                    if (selectedLangs.includes(langData.language)) {
+                        translationGrid.appendChild(createTranslationCard(langData));
+                    }
+                });
+            }
+
+            // Render Word Details
             let detailsHtml = '';
-            if (data.german.article) detailsHtml += `<p><strong>Artikel:</strong> ${data.german.article}</p>`;
-            if (data.german.pluralTip) detailsHtml += `<p><strong>Plural:</strong> ${data.german.pluralTip}</p>`;
-            if (data.german.conjugationTips) detailsHtml += `<p><strong>Konjugation:</strong> ${data.german.conjugationTips}</p>`;
-            if (data.german.example) detailsHtml += `<p><strong>Beispiel:</strong> <em>${data.german.example}</em></p>`;
+            if (data.german) {
+                // 🐛 FIX 2: Always show the base word as a title so the box is NEVER empty
+                detailsHtml += `<h3 style="margin: 0 0 10px 0; color: var(--theme-primary);">${data.german.word}</h3>`;
+                
+                if (data.german.article && data.german.article !== "null") detailsHtml += `<p><strong>Artikel:</strong> ${data.german.article}</p>`;
+                if (data.german.pluralTip && data.german.pluralTip !== "null") detailsHtml += `<p><strong>Plural:</strong> ${data.german.pluralTip}</p>`;
+                if (data.german.conjugationTips && data.german.conjugationTips !== "null") detailsHtml += `<p><strong>Konjugation:</strong> ${data.german.conjugationTips}</p>`;
+                if (data.german.example && data.german.example !== "null") detailsHtml += `<p><strong>Beispiel:</strong> <em>${data.german.example}</em></p>`;
+            }
+            
             wordDetailsArea.innerHTML = detailsHtml;
             wordDetailsArea.classList.remove('hidden');
+            wordDetailsArea.style.display = 'block'; // Force display just in case
 
             // Fetch the contextual Image from Unsplash
-            const searchWord = data.safeImageSearchQuery || data.german.word;
-            const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`);
+            const searchWord = data.safeImageSearchQuery || (data.german ? data.german.word : inputText);
+            const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(inputText)}&searchQuery=${encodeURIComponent(searchWord)}`);
             const imgData = await imgRes.json();
 
             if (imgData.imageUrl) {
