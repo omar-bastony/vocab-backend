@@ -189,32 +189,25 @@ app.post('/api/analyze-sentence', async (req, res) => {
     const cleanSentence = sentence.trim();
     if (cleanSentence.length > 200) return res.status(400).json({ error: "Sentence too long." });
 
-    const cacheKey = `sentence:v4:${cleanSentence.toLowerCase()}`;
+    const cacheKey = `sentence:v5:${cleanSentence.toLowerCase()}`;
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) return res.json(cachedData);
     } catch (e) {}
 
     // Keeping your exact Chain-of-Thought prompt!
-    const promptText = `Act as a strict, expert German grammar teacher. Analyze this text: "${cleanSentence}".
-    First, aggressively check for and FIX all spelling, capitalization, AND GRAMMAR errors. 
-    CRITICAL: Pay strict attention to verb government (Kasusrektion). For example, verbs like 'helfen', 'danken', and 'gefallen' strictly require the DATIVE case. You MUST fix any wrong cases, adjective endings, or conjugations.
-    
-    Return STRICTLY a JSON object with this exact structure:
+    const promptText = `Analyze this PERFECTLY CORRECT German sentence: "${cleanSentence}".
+    Break it down word by word into a JSON array.
+    Return STRICTLY a JSON object:
     {
-      "originalSentence": "${cleanSentence}",
-      "errorAnalysis": ["Schritt 1: Welches Verb?", "Schritt 2: Welcher Kasus?", "Schritt 3: Fehler im Original?"],
-      "wasCorrected": true,
-      "correctedSentence": "The grammatically perfect German sentence",
-      "grammarExplanation": "Eine einfache Erklärung der Hauptgrammatikregel in diesem Satz auf DEUTSCH. Erwähne, wenn ein Verb einen bestimmten Kasus verlangt.",
       "wordBreakdown": [
         {
-          "word": "Exact word from CORRECTED sentence",
+          "word": "Exact word from the sentence",
           "baseForm": "Dictionary form",
           "pos": "STRICTLY IN GERMAN: Nomen, Verb, Artikel, Pronomen, Adjektiv, Präposition, Adverb, or Sonstiges",
           "englishMeaning": "Direct English translation in context",
           "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv' or null.",
-          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. '1. Person Singular', 'Plural'). Do NOT include case."
+          "grammarTip": "Ein winziger Grammatik-Hinweis. Do NOT include case."
         }
       ]
     }`;
@@ -446,7 +439,49 @@ app.post('/api/translate-sentence', async (req, res) => {
     }
 });
 
+// =======================================================================
+// 7. FAST GRAMMAR CORRECTION (Powered by OpenAI gpt-4o-mini)
+// =======================================================================
+app.post('/api/fast-correct', async (req, res) => {
+    const { sentence } = req.body;
+    if (!sentence) return res.status(400).json({ error: "Sentence required" });
 
+    const promptText = `Du bist ein strenger Deutschlehrer. Prüfe diesen Satz: "${sentence}".
+    Achte GANZ GENAU auf die Kasusrektion (z.B. 'helfen', 'danken', 'glauben' + Dativ).
+    Gibt STRIKT ein JSON-Objekt zurück:
+    {
+      "originalSentence": "${sentence}",
+      "wasCorrected": true oder false,
+      "correctedSentence": "Der grammatikalisch perfekte Satz",
+      "grammarExplanation": "Eine sehr kurze Erklärung auf Deutsch, warum du das korrigiert hast (welcher Kasus, warum?). Wenn der Satz richtig war, lobe den Schüler kurz."
+    }`;
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages: [{ role: "user", content: promptText }],
+                response_format: { type: "json_object" },
+                temperature: 0.1
+            })
+        });
+
+        if (!response.ok) throw new Error(`OpenAI API Error: ${response.status}`);
+        
+        const data = await response.json();
+        const parsedData = JSON.parse(data.choices[0].message.content);
+        
+        res.json(parsedData);
+    } catch (err) {
+        console.error("OpenAI Correction Error:", err);
+        res.status(500).json({ error: "Correction failed." });
+    }
+});
 
 
 

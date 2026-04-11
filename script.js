@@ -419,7 +419,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // 📍 PHASE 1: INSTANT TRANSLATION (Using the user's raw input)
-            // Fire this off immediately so the user has something to read.
             fetch(`${BACKEND_URL}/api/translate-sentence`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -431,36 +430,66 @@ document.addEventListener('DOMContentLoaded', () => {
                     const card = createTranslationCard({ language: lang, meanings: [translation], example: "" });
                     card.style.animationDelay = `${delayIndex * 0.05}s`;
                     card.classList.add('fade-in');
-                    // Add an ID to the translation text so we can easily update it later if needed
                     card.querySelector('.translated-word').id = `trans-text-${lang}`;
                     translationGrid.appendChild(card);
                     delayIndex++;
                 }
             }).catch(e => console.error("Initial translation failed:", e));
 
-
-            // 📍 PHASE 2: BACKGROUND GRAMMAR ANALYSIS (Groq)
-            const res = await fetch(`${BACKEND_URL}/api/analyze-sentence`, {
+            // 📍 PHASE 2: INSTANT GRAMMAR CHECK (OpenAI)
+            const openAiRes = await fetch(`${BACKEND_URL}/api/fast-correct`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sentence: text })
             });
             
-            if (!res.ok) throw new Error("Sentence analysis failed");
-            const data = await res.json();
+            if (!openAiRes.ok) throw new Error("OpenAI correction failed");
+            const grammarData = await openAiRes.json();
             
-            // Build the Interactive Word Cards UI
-            if (data.wasCorrected && correctionArea) {
+            // Instantly show the correction alert!
+            const correctionArea = document.getElementById('correctionArea');
+            if (grammarData.wasCorrected && correctionArea) {
                 correctionArea.innerHTML = `
                 <div class="correction-alert fade-in">
-                  <strong>✨ Korrigiert:</strong>
-                  ${data.correctedSentence}
+                  <strong>✨ Korrigiert:</strong> ${grammarData.correctedSentence}
                 </div>`;
                 correctionArea.classList.remove('hidden');
             }
+
+            // 📍 PHASE 3: THE SILENT UPDATE (Google Translate)
+            // If OpenAI changed the sentence, quietly update the translations
+            if (grammarData.wasCorrected) {
+                fetch(`${BACKEND_URL}/api/translate-sentence`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sentence: grammarData.correctedSentence, targetLanguages: selectedLangs })
+                }).then(res => res.json()).then(transData => {
+                    for (const [lang, translation] of Object.entries(transData.translations)) {
+                        const textElement = document.getElementById(`trans-text-${lang}`);
+                        if (textElement && textElement.innerText !== translation) {
+                            textElement.style.opacity = '0';
+                            setTimeout(() => { textElement.innerText = translation; textElement.style.opacity = '1'; }, 200);
+                        }
+                    }
+                });
+            }
+
+            // 📍 PHASE 4: WORD CARDS BUILDER (Groq)
+            // Pass the PERFECT sentence from OpenAI to Groq to just build the cards
+            const finalSentence = grammarData.wasCorrected ? grammarData.correctedSentence : text;
             
+            const groqRes = await fetch(`${BACKEND_URL}/api/analyze-sentence`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sentence: finalSentence })
+            });
+            
+            if (!groqRes.ok) throw new Error("Groq analysis failed");
+            const breakdownData = await groqRes.json();
+            
+            // Build the Word Cards UI
             let html = `<div class="word-cards-container fade-in">`;
-            data.wordBreakdown.forEach(item => {
+            breakdownData.wordBreakdown.forEach(item => {
                 const tipHtml = item.grammarTip ? `<div class="wc-grammar">${item.grammarTip}</div>` : '';
                 let caseBadgeHtml = '';
                 if (item.kasus && item.kasus !== "null") {
@@ -477,8 +506,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
             });
             html += `</div>`;
-            html += `<div class="grammar-explanation-box fade-in">💡 <b>Grammatik:</b> ${data.grammarExplanation}</div>`;
             
+            // Attach OpenAI's smart explanation to the bottom!
+            html += `<div class="grammar-explanation-box fade-in">💡 <b>Grammatik:</b> ${grammarData.grammarExplanation}</div>`;
+            
+            // Render it and add click listeners
             if (sentenceArea) {
                 sentenceArea.innerHTML = html;
                 sentenceArea.querySelectorAll('.word-card').forEach(card => {
@@ -492,29 +524,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         translateBtn.click(); 
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
-                });
-            }
-
-            // 📍 PHASE 3: THE SILENT UPDATE
-            // If Groq actually corrected the grammar, we quietly fetch a new translation 
-            // and swap the text on the screen without blinking the UI.
-            if (data.wasCorrected) {
-                fetch(`${BACKEND_URL}/api/translate-sentence`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sentence: data.correctedSentence, targetLanguages: selectedLangs })
-                }).then(res => res.json()).then(transData => {
-                    for (const [lang, translation] of Object.entries(transData.translations)) {
-                        const textElement = document.getElementById(`trans-text-${lang}`);
-                        if (textElement && textElement.innerText !== translation) {
-                            // Briefly fade out, update text, fade back in
-                            textElement.style.opacity = '0';
-                            setTimeout(() => {
-                                textElement.innerText = translation;
-                                textElement.style.opacity = '1';
-                            }, 200);
-                        }
-                    }
                 });
             }
 
