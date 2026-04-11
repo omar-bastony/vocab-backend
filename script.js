@@ -550,6 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         try {
+          // 📍 PHASE 1: Fetch Grammar & Word Meanings (Groq)
           const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: text }) 
           });
@@ -558,6 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = await textRes.json();
           const germanData = data.german;
           
+          // Update Global Colors & Top UI
           document.body.classList.remove('theme-der', 'theme-die', 'theme-das'); 
           if (germanData.partOfSpeech === 'noun' && germanData.article) {
               const article = germanData.article.toLowerCase();
@@ -586,27 +588,58 @@ document.addEventListener('DOMContentLoaded', () => {
           germanSpeakBtn.onclick = () => playAudio(textToSpeak, 'de-DE');
           germanSpeakBtn.classList.remove('hidden');
 
+          // 📍 PHASE 2: Render Translation Cards (With Example Shimmer)
           translationGrid.innerHTML = ''; 
-          
           const filteredTranslations = data.translations.filter(langData => selectedLangs.includes(langData.language));
           
           filteredTranslations.forEach((langData, index) => {
-            const card = createTranslationCard(langData);
+            // Temporarily inject a shimmer for the example sentence
+            const cardData = {
+                language: langData.language,
+                meanings: langData.meanings,
+                example: `<div class="shimmer" style="height: 12px; width: 85%; margin-top: 6px; border-radius: 4px;"></div>`
+            };
+            const card = createTranslationCard(cardData);
             card.style.animationDelay = `${index * 0.05}s`;
             card.classList.add('fade-in');
+            card.id = `word-card-${langData.language}`; // Add ID to target later
             translationGrid.appendChild(card);
           });
 
+          // 📍 PHASE 3: Fetch Image (Background)
           const searchWord = data.safeImageSearchQuery || data.german.word;
-          
-          const imgRes = await fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`);
-          const imgData = await imgRes.json();
+          fetch(`${BACKEND_URL}/api/image?germanWord=${encodeURIComponent(data.german.word)}&searchQuery=${encodeURIComponent(searchWord)}`)
+            .then(res => res.json())
+            .then(imgData => {
+                if (imgData.imageUrl) {
+                    const img = document.getElementById('centralImage'); const shimmer = document.getElementById('mainImageShimmer');
+                    img.src = imgData.imageUrl;
+                    img.onload = () => { img.style.display = 'block'; img.classList.add('fade-in'); shimmer.style.display = 'none'; };
+                }
+            });
 
-          if (imgData.imageUrl) {
-              const img = document.getElementById('centralImage'); const shimmer = document.getElementById('mainImageShimmer');
-              img.src = imgData.imageUrl;
-              img.onload = () => { img.style.display = 'block'; img.classList.add('fade-in'); shimmer.style.display = 'none'; };
-          }
+          // 📍 PHASE 4: Fetch Example Sentence Translations (Google API)
+          fetch(`${BACKEND_URL}/api/translate-sentence`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sentence: germanData.example, targetLanguages: selectedLangs })
+          }).then(res => res.json()).then(transData => {
+              for (const [lang, translation] of Object.entries(transData.translations)) {
+                  const card = document.getElementById(`word-card-${lang}`);
+                  if (card) {
+                      const exampleEl = card.querySelector('.example-sentence');
+                      if (exampleEl) {
+                          // Silently swap the shimmer for the real translation
+                          exampleEl.style.opacity = '0';
+                          setTimeout(() => {
+                              exampleEl.innerHTML = translation;
+                              exampleEl.style.opacity = '1';
+                          }, 200);
+                      }
+                  }
+              }
+          });
+
         } catch (error) {
           translationGrid.innerHTML = `<p style="color: #ba1a1a; text-align: center; width: 100%; font-weight: 500;">Etwas ist schiefgelaufen.</p>`;
         } finally {

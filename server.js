@@ -111,7 +111,7 @@ app.post('/api/translate', async (req, res) => {
         'Somali', 'Armenian'
     ];
     
-    const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
+    const cacheKey = `word:v4:${cleanWord.toLowerCase()}`;
     
     try {
         const cachedData = await redis.get(cacheKey);
@@ -124,7 +124,7 @@ app.post('/api/translate', async (req, res) => {
     }
 
     const langPromptStr = allLanguages.map(l => 
-      `{"language":"${l}","meanings":["m1","m2"],"example":"Translated sentence"}`
+      `{"language":"${l}","meanings":["m1","m2"]}`
     ).join(',\n        ');
 
     const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
