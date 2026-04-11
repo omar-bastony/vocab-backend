@@ -187,17 +187,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         html += `</tr></thead><tbody>`;
         
-        // 2. Loop through the rows and turn cases into colorful Badges!
+// 2. BULLETPROOF BADGE DETECTOR (Regex)
         data.items.forEach(row => {
           html += `<tr>`;
           Object.values(row).forEach(val => {
-            // FIX: Convert to string and trim spaces to guarantee a match
             const strVal = String(val).trim();
-            const isCase = ['Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'].includes(strVal);
             
-            if (isCase) {
-                // Apply the exact badge class dynamically
-                html += `<td><span class="case-badge case-${strVal.toLowerCase()}">${strVal}</span></td>`;
+            // Search for the case words anywhere in the string, ignoring case sensitivity
+            const match = strVal.match(/(Nominativ|Akkusativ|Dativ|Genitiv)/i);
+            
+            if (match) {
+                // match[1] holds the exact word it found (e.g., "Dativ")
+                const caseName = match[1].toLowerCase();
+                html += `<td><span class="case-badge case-${caseName}">${strVal}</span></td>`;
             } else {
                 html += `<td>${val}</td>`;
             }
