@@ -189,7 +189,7 @@ app.post('/api/analyze-sentence', async (req, res) => {
     const cleanSentence = sentence.trim();
     if (cleanSentence.length > 200) return res.status(400).json({ error: "Sentence too long." });
 
-    const cacheKey = `sentence:v5:${cleanSentence.toLowerCase()}`;
+    const cacheKey = `sentence:v6:${cleanSentence.toLowerCase()}`;
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) return res.json(cachedData);
@@ -440,7 +440,7 @@ app.post('/api/translate-sentence', async (req, res) => {
 });
 
 // =======================================================================
-// 7. FAST GRAMMAR CORRECTION (Powered by Gemini 2.5 Flash-Lite)
+// 🚨 FAST GRAMMAR CORRECTION (Powered by Gemini 2.5 Flash-Lite)
 // =======================================================================
 app.post('/api/fast-correct', async (req, res) => {
     const { sentence } = req.body;
@@ -454,11 +454,26 @@ app.post('/api/fast-correct', async (req, res) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 system_instruction: {
-                    parts: { text: "Du bist ein strenger Deutschlehrer. Achte GANZ GENAU auf die Kasusrektion (z.B. 'helfen', 'danken', 'glauben' + Dativ)." }
+                    parts: [{ 
+                        // 📍 FIX: Our new, highly detailed prompt!
+                        text: `Du bist ein strenger, hochpräziser Deutschlehrer. 
+Achte GANZ GENAU auf:
+1. Kasusrektion bei Verben (z.B. 'helfen', 'danken' verlangen Dativ).
+2. Verben mit Präpositionen (z.B. 'glauben an', 'denken an', 'warten auf' verlangen zwingend den AKKUSATIV).
+3. Groß- und Kleinschreibung (Nomen und Satzanfänge MÜSSEN großgeschrieben werden).
+
+Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
+{
+  "originalSentence": "Der Text vom Benutzer",
+  "wasCorrected": true,
+  "correctedSentence": "Der grammatikalisch und orthografisch perfekte Satz.",
+  "grammarExplanation": "Eine sehr kurze, präzise Erklärung auf Deutsch, warum du das korrigiert hast (Welcher Kasus? Welche Präposition?). Wenn der Satz komplett richtig war, lobe den Schüler kurz."
+}` 
+                    }]
                 },
                 contents: [{
                     role: "user",
-                    parts: [{ text: `Prüfe diesen Satz: "${sentence}". Gib STRIKT ein JSON-Objekt zurück mit originalSentence, wasCorrected (boolean), correctedSentence, und grammarExplanation (kurze deutsche Erklärung).` }]
+                    parts: [{ text: `Prüfe diesen Text: "${sentence}"` }]
                 }],
                 generationConfig: {
                     response_mime_type: "application/json",
