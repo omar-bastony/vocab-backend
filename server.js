@@ -231,32 +231,40 @@ app.post('/api/analyze-sentence', async(req, res) => {
             error: "Sentence too long."
         });
 
-    const cacheKey = `sentence:v7:${cleanSentence.toLowerCase()}`;
+    const cacheKey = `sentence:v8:${cleanSentence.toLowerCase()}`;
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData)
             return res.json(cachedData);
     } catch (e) {}
+	
+	// 📍 2. JavaScript does the splitting!
+    // We strip punctuation for the analysis, but keep the word count exact.
+    const wordsArray = cleanSentence.replace(/[.,!?]/g, '').trim().split(/\s+/);
+    const exactWordCount = wordsArray.length;
+	
+    // 📍 3. The "Token-Forced" Prompt
+    const promptText = `Du analysierst einen PERFEKT KORRIGIERTEN deutschen Satz.
+    Ich habe den Satz bereits für dich in exakt ${exactWordCount} Wörter zerlegt:
+    ${JSON.stringify(wordsArray)}
 
-    // Keeping your exact Chain-of-Thought prompt!
-    const promptText = `Du analysierst einen bereits PERFEKT KORRIGIERTEN deutschen Satz: "${cleanSentence}".
-    Deine EINZIGE Aufgabe ist es, den Satz Wort für Wort in ein JSON-Array zu zerlegen.
-
+    Deine EINZIGE Aufgabe ist es, dieses Array Wort für Wort zu analysieren.
+    
     KRITISCHE REGELN:
-    1. LASS KEIN WORT AUS! Wenn ein Wort (wie 'ich') zweimal im Satz vorkommt, MUSS es auch zweimal in deinem JSON-Array auftauchen.
-    2. Verändere keine Wörter, zerlege sie nur.
-    3. Kasus-Analyse: Pronomen wie 'uns'/'euch' sind tückisch! Prüfe immer das Verb. Nach 'helfen', 'danken', 'gefallen', 'glauben' MUSS 'Dativ' stehen. Nach 'glauben an' MUSS 'Akkusativ' stehen.
+    1. Dein 'wordBreakdown' Array MUSS EXAKT ${exactWordCount} Elemente enthalten.
+    2. Bearbeite die Wörter in GENAU der Reihenfolge, in der sie oben im Array stehen.
+    3. Kasus-Regel: Nach 'helfen', 'danken', 'glauben' MUSS Dativ stehen. Nach 'glauben an' MUSS Akkusativ stehen. Prüfe bei Pronomen ('ich', 'mir', 'euch') immer das Verb.
 
     Return STRICTLY a JSON object:
     {
       "wordBreakdown": [
         {
-          "word": "Exact word from the sentence",
+          "word": "Exact word from the array",
           "baseForm": "Dictionary form",
           "pos": "STRICTLY IN GERMAN: Nomen, Verb, Artikel, Pronomen, Adjektiv, Präposition, Adverb, or Sonstiges",
           "englishMeaning": "Direct English translation in context",
           "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv' oder null.",
-          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. 'Regelmäßiges Verb', 'Plural'). Do NOT include case here."
+          "grammarTip": "Ein winziger Grammatik-Hinweis."
         }
       ]
     }`;
