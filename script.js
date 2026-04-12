@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sentenceArea) {
             sentenceArea.innerHTML = `
             <div class="fade-in" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 0.5rem; padding-left: 4px;">
-                <div class="shimmer" style="width: 18px; height: 18px; border-radius: 50%;"></div>
+                <lottie-player src="loading.json" background="transparent" speed="1" style="width: 60px; height: 60px;" loop autoplay></lottie-player>
                 <div class="shimmer" style="height: 12px; width: 280px; border-radius: 4px;"></div>
             </div>`;
             sentenceArea.classList.remove('hidden');
@@ -416,6 +416,9 @@ document.addEventListener('DOMContentLoaded', () => {
           skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
           translationGrid.appendChild(skeleton);
         });
+		
+		// 🛑 TEMPORARY DEV HACK: Pause execution for 3 seconds (3000ms)
+				await new Promise(resolve => setTimeout(resolve, 10000));
 
         try {
             // 📍 PHASE 1: INSTANT GRAMMAR CHECK (OpenAI / Gemini Flash-Lite)
@@ -527,7 +530,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
         wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
         
-        document.getElementById('germanWordTitle').innerHTML = '<div class="shimmer" style="height: 2.2rem; width: 50%; border-radius: 4px;"></div>';
+        document.getElementById('germanWordTitle').innerHTML = '<div style="display: flex; align-items: center; height: 2.2rem;">
+             <lottie-player src="loading.json" background="transparent" speed="1" style="width: 40px; height: 40px;" loop autoplay></lottie-player>
+          </div>';
         document.getElementById('grammarTips').innerHTML = '';
         document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
         
