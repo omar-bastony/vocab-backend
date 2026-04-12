@@ -29,6 +29,40 @@ app.get('/', (req, res) => {
 app.get('/api/wakeup', (req, res) => res.json({
         status: "Awake!"
     }));
+	
+	
+
+// =======================================================================
+// 🛡️ API RETRY UTILITY (Exponential Backoff)
+// =======================================================================
+async function fetchWithRetry(url, options, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, options);
+            
+            // If the response is successful, return it immediately
+            if (response.ok) return response;
+
+            // If we get a 400 or 500 error, throw an error to trigger the catch block
+            throw new Error(`API returned status: ${response.status}`);
+            
+        } catch (error) {
+            // If this was our last attempt, throw the error so the frontend knows it failed
+            if (i === maxRetries - 1) {
+                console.error(`❌ Fetch failed after ${maxRetries} attempts:`, error.message);
+                throw error;
+            }
+            
+            // Otherwise, calculate a delay (500ms, then 1000ms, then 2000ms)
+            const delay = Math.pow(2, i) * 500;
+            console.warn(`⚠️ API Error (${error.message}). Retrying in ${delay}ms... (Attempt ${i + 1} of ${maxRetries})`);
+            
+            // Wait for the delay before the loop restarts
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
 
 // =======================================================================
 // 1. AI SPELLCHECK ROUTE (Database First, Groq Fallback)
@@ -174,7 +208,9 @@ app.post('/api/translate', async(req, res) => {
 
     try {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
-        const response = await fetch(url, {
+        
+        // 📍 FIX: Replaced standard fetch with fetchWithRetry (3 attempts)
+        const response = await fetchWithRetry(url, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
@@ -192,12 +228,9 @@ app.post('/api/translate', async(req, res) => {
                 },
                 temperature: 0.1
             })
-        });
+        }, 3); 
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Groq API Error: ${response.status}`);
-        }
+        // Removed the "if (!response.ok)" block because fetchWithRetry handles it!
 
         const data = await response.json();
         const parsedData = JSON.parse(data.choices[0].message.content);
@@ -269,33 +302,26 @@ app.post('/api/analyze-sentence', async(req, res) => {
       ]
     }`;
 
+
     try {
         // 📍 NEW: Fetching from Groq instead of Gemini
         const url = 'https://api.groq.com/openai/v1/chat/completions';
-        const response = await fetch(url, {
+        const response = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
-                messages: [{
-                        role: "user",
-                        content: promptText
-                    }
-                ],
-                response_format: {
-                    type: "json_object"
-                }, // Guarantees JSON without markdown stripping
+                model: "llama3-8b-8192", // or whichever model you are using
+                messages: [{ role: "user", content: promptText }],
+                response_format: { type: "json_object" },
                 temperature: 0.1
             })
-        });
-
-        if (!response.ok)
-            throw new Error(`Groq API Error: ${response.status}`);
+        }, 3);
 
         const data = await response.json();
+		
         const parsedData = JSON.parse(data.choices[0].message.content);
 
         try {
@@ -495,39 +521,38 @@ app.post('/api/translate-sentence', async(req, res) => {
 
         // 2. Fetch all translations simultaneously using Promise.all
         await Promise.all(targetLanguages.map(async(lang) => {
-                const targetLangCode = googleLangMap[lang];
+            const targetLangCode = googleLangMap[lang];
 
-                if (!targetLangCode) {
-                    translations[lang] = "Language not mapped.";
-                    return;
-                }
+            if (!targetLangCode) {
+                translations[lang] = "Language not mapped.";
+                return;
+            }
 
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            q: sentence,
-                            target: targetLangCode,
-                            source: 'de', // Force source language to German to prevent mis-detections
-                            format: 'text'
-                        })
-                    });
+            try {
+                // 📍 FIX: Replaced standard fetch with fetchWithRetry (3 attempts)
+                const response = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        q: sentence,
+                        target: targetLangCode,
+                        source: 'de', // Force source language to German
+                        format: 'text'
+                    })
+                }, 3);
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        translations[lang] = data.data.translations[0].translatedText;
-                    } else {
-                        console.error(`Google API Error for ${lang}: ${response.status}`);
-                        translations[lang] = "❌ Translation error.";
-                    }
-                } catch (e) {
-                    console.error(`Google Fetch Failed for ${lang}:`, e);
-                    translations[lang] = "❌ Translation failed.";
-                }
-            }));
+                // Because fetchWithRetry throws an error on failure, 
+                // if we reach this line, we know the response is 100% successful!
+                const data = await response.json();
+                translations[lang] = data.data.translations[0].translatedText;
+                
+            } catch (e) {
+                console.error(`Google Fetch Failed for ${lang} after 3 attempts:`, e);
+                translations[lang] = "❌ Translation failed.";
+            }
+        }));
 
         res.json({
             translations
@@ -553,49 +578,40 @@ app.post('/api/fast-correct', async(req, res) => {
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-        const response = await fetch(url, {
+        const response = await fetchWithRetry(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 system_instruction: {
-                    parts: [{
-                            // 📍 FIX: Our new, highly detailed prompt!
-                            text: `Du bist ein strenger, hochpräziser Deutschlehrer.
-									Prüfe den Text GANZ GENAU. 
+										parts: [{
+												text: `Du bist ein strenger, hochpräziser Deutschlehrer.
+														Prüfe den Text GANZ GENAU. 
 
-									WICHTIGE KASUS-REGELN:
-									1. 'glauben' (OHNE 'an') verlangt IMMER Dativ! (Beispiel: 'Ich glaube euch' -> 'euch' ist Dativ).
-									2. 'glauben an' verlangt IMMER Akkusativ! (Beispiel: 'Ich glaube an euch' -> 'euch' ist Akkusativ).
-									3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ.
+														WICHTIGE KASUS-REGELN:
+														1. 'glauben' (OHNE 'an') verlangt IMMER Dativ! (Beispiel: 'Ich glaube euch' -> 'euch' ist Dativ).
+														2. 'glauben an' verlangt IMMER Akkusativ! (Beispiel: 'Ich glaube an euch' -> 'euch' ist Akkusativ).
+														3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ.
 
-									Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:{
-									  "originalSentence": "Der Text vom Benutzer",
-									  "wasCorrected": true oder false,
-									  "correctedSentence": "Der perfekte Satz.",
-									  "grammarExplanation": "Wenn korrigiert: Erkläre den Fehler. Wenn der Satz SCHON RICHTIG war: Lobe den Schüler kurz und nenne den korrekten Kasus (z.B. 'Richtig! Das Verb glauben verlangt den Dativ.'). BEHAUPTE NIEMALS, dass 'glauben' (ohne an) den Akkusativ verlangt!"
-									}`
-                        }
-                    ]
-                },
+														Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:{
+														  "originalSentence": "Der Text vom Benutzer",
+														  "wasCorrected": true oder false,
+														  "correctedSentence": "Der perfekte Satz.",
+														  "grammarExplanation": "Wenn korrigiert: Erkläre den Fehler. Wenn der Satz SCHON RICHTIG war: Lobe den Schüler kurz und nenne den korrekten Kasus (z.B. 'Richtig! Das Verb glauben verlangt den Dativ.'). BEHAUPTE NIEMALS, dass 'glauben' (ohne an) den Akkusativ verlangt!"
+														}`
+											}
+										]
+									},
                 contents: [{
-                        role: "user",
-                        parts: [{
-                                text: `Prüfe diesen Text: "${sentence}"`
-                            }
-                        ]
-                    }
-                ],
+                    role: "user",
+                    parts: [{ text: `Prüfe diesen Text: "${sentence}"` }]
+                }],
                 generationConfig: {
                     response_mime_type: "application/json",
                     temperature: 0.1
                 }
             })
-        });
+        }, 3);
 
-        if (!response.ok)
-            throw new Error(`Gemini Flash-Lite API Error: ${response.status}`);
 
         const data = await response.json();
         // Gemini wraps the string response in the text property, we parse it into a real JSON object
@@ -609,6 +625,12 @@ app.post('/api/fast-correct', async(req, res) => {
         });
     }
 });
+
+
+// =======================================================================
+// =======================================================================
+// =======================================================================
+
 
 // --- VERCEL EXPORT ---
 if (process.env.NODE_ENV !== 'production') {
