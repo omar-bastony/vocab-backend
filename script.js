@@ -529,11 +529,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
         wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
         
-        document.getElementById('germanWordTitle').innerHTML = `<div style="display: flex; align-items: center; height: 2.2rem;">
-             <lottie-player src="loading.json" background="transparent" speed="1" style="width: 60px; height: 60px;" loop autoplay></lottie-player>
-          </div>`;
+        document.getElementById('germanWordTitle').innerHTML = `<div class="fade-in" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 0.5rem; padding-left: 4px;">
+                <lottie-player src="loading.json" background="transparent" speed="1" style="width: 60px; height: 60px;" loop autoplay></lottie-player>
+                <div class="shimmer" style="height: 12px; width: 280px; border-radius: 4px;"></div>
+            </div>`;
         document.getElementById('grammarTips').innerHTML = '';
-        document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
+        document.getElementById('germanExample').innerHTML = '';
         
         // 📍 NEW: Hide the tip, show the image container & shimmer
         document.getElementById('tipOfTheDay').style.display = 'none';
