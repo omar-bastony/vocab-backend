@@ -655,6 +655,12 @@ app.post('/api/fast-correct', async(req, res) => {
         // Gemini wraps the string response in the text property, we parse it into a real JSON object
         const parsedData = JSON.parse(data.candidates[0].content.parts[0].text);
 
+        try {
+            await redis.set(cacheKey, parsedData);
+        } catch (cacheSetErr) {
+            console.error("Redis Cache Write Error:", cacheSetErr);
+        }
+
         res.json(parsedData);
     } catch (err) {
         console.error("Flash-Lite Correction Error:", err);
