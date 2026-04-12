@@ -240,12 +240,12 @@ app.post('/api/analyze-sentence', async(req, res) => {
 
     // Keeping your exact Chain-of-Thought prompt!
     const promptText = `Du analysierst einen bereits PERFEKT KORRIGIERTEN deutschen Satz: "${cleanSentence}".
-    Verändere KEINE Wörter. Deine EINZIGE Aufgabe ist es, den Satz Wort für Wort in ein JSON-Array zu zerlegen.
+    Deine EINZIGE Aufgabe ist es, den Satz Wort für Wort in ein JSON-Array zu zerlegen.
 
-    ACHTUNG FÜR DEINE KASUS-ANALYSE (Das 'kasus' Tag):
-    1. Pronomen wie 'uns'/'euch' sind tückisch! Prüfe immer das Verb, bevor du den Kasus festlegst.
-    2. Nach 'helfen', 'danken', 'gefallen', 'glauben' MUSS dein Tag 'Dativ' sein.
-    3. Nach 'glauben an' oder 'denken an' MUSS dein Tag 'Akkusativ' sein.
+    KRITISCHE REGELN:
+    1. LASS KEIN WORT AUS! Wenn ein Wort (wie 'ich') zweimal im Satz vorkommt, MUSS es auch zweimal in deinem JSON-Array auftauchen.
+    2. Verändere keine Wörter, zerlege sie nur.
+    3. Kasus-Analyse: Pronomen wie 'uns'/'euch' sind tückisch! Prüfe immer das Verb. Nach 'helfen', 'danken', 'gefallen', 'glauben' MUSS 'Dativ' stehen. Nach 'glauben an' MUSS 'Akkusativ' stehen.
 
     Return STRICTLY a JSON object:
     {
