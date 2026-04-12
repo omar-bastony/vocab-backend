@@ -18,22 +18,27 @@ app.use(express.static(__dirname));
 
 // Initialize Global Redis Cache
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/api/wakeup', (req, res) => res.json({ status: "Awake!" }));
+app.get('/api/wakeup', (req, res) => res.json({
+        status: "Awake!"
+    }));
 
 // =======================================================================
 // 1. AI SPELLCHECK ROUTE (Database First, Groq Fallback)
 // =======================================================================
-app.post('/api/spellcheck', async (req, res) => {
+app.post('/api/spellcheck', async(req, res) => {
     const { word } = req.body;
-    if (!word || word.length < 2) return res.json({ corrected: null });
+    if (!word || word.length < 2)
+        return res.json({
+            corrected: null
+        });
 
     const cleanWord = word.trim();
     const cacheKey = `trans:all:${cleanWord.toLowerCase()}`;
@@ -44,9 +49,13 @@ app.post('/api/spellcheck', async (req, res) => {
         if (cachedData && cachedData.german && cachedData.german.word) {
             const correctSpelling = cachedData.german.word;
             if (correctSpelling.toLowerCase() !== cleanWord.toLowerCase()) {
-                return res.json({ corrected: correctSpelling });
+                return res.json({
+                    corrected: correctSpelling
+                });
             } else {
-                return res.json({ corrected: null }); 
+                return res.json({
+                    corrected: null
+                });
             }
         }
     } catch (cacheErr) {
@@ -60,59 +69,79 @@ app.post('/api/spellcheck', async (req, res) => {
         const url = 'https://api.groq.com/openai/v1/chat/completions';
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json' 
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
-                messages: [{ role: "user", content: promptText }],
-                temperature: 0 
+                messages: [{
+                        role: "user",
+                        content: promptText
+                    }
+                ],
+                temperature: 0
             })
         });
-        
-        if (!response.ok) return res.json({ corrected: null });
-        
+
+        if (!response.ok)
+            return res.json({
+                corrected: null
+            });
+
         const data = await response.json();
         const result = data.choices[0].message.content.trim();
-        
+
         // UI SAFETY CATCH
         if (result.length > 25 || result.includes(" ")) {
-            return res.json({ corrected: null });
+            return res.json({
+                corrected: null
+            });
         }
 
         if (result === "PERFECT" || result.toLowerCase() === cleanWord.toLowerCase()) {
-            res.json({ corrected: null });
+            res.json({
+                corrected: null
+            });
         } else {
-            res.json({ corrected: result });
+            res.json({
+                corrected: result
+            });
         }
     } catch (err) {
         console.error("Spellcheck Error:", err);
-        res.json({ corrected: null });
+        res.json({
+            corrected: null
+        });
     }
 });
 
 // =======================================================================
 // 2. MAIN TRANSLATION ROUTE (Groq Powered)
 // =======================================================================
-app.post('/api/translate', async (req, res) => {
+app.post('/api/translate', async(req, res) => {
     const { word } = req.body;
-    if (!word) return res.status(400).json({ error: "Word required" });
-    
+    if (!word)
+        return res.status(400).json({
+            error: "Word required"
+        });
+
     const cleanWord = word.trim();
 
     if (cleanWord.length > 45 || cleanWord.split(' ').length > 4) {
-        return res.status(400).json({ error: "Input too long. Please enter a single word or short phrase." });
+        return res.status(400).json({
+            error: "Input too long. Please enter a single word or short phrase."
+        });
     }
-    
+
     const allLanguages = [
-        'English', 'Arabic', 'Russian', 'Dari', 'Farsi', 'Amharic', 
-        'Tigrinya', 'Spanish', 'French', 'Turkish', 'Ukrainian', 
+        'English', 'Arabic', 'Russian', 'Dari', 'Farsi', 'Amharic',
+        'Tigrinya', 'Spanish', 'French', 'Turkish', 'Ukrainian',
         'Somali', 'Armenian'
     ];
-    
+
     const cacheKey = `word:v4:${cleanWord.toLowerCase()}`;
-    
+
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
@@ -123,9 +152,8 @@ app.post('/api/translate', async (req, res) => {
         console.error("Redis Cache Read Error:", cacheErr);
     }
 
-    const langPromptStr = allLanguages.map(l => 
-      `{"language":"${l}","meanings":["m1","m2"]}`
-    ).join(',\n        ');
+    const langPromptStr = allLanguages.map(l =>
+`{"language":"${l}","meanings":["m1","m2"]}`).join(',\n        ');
 
     const promptText = `Analyze the German word "${word}". Return STRICTLY a JSON object with this exact structure, nothing else:
     {
@@ -150,16 +178,22 @@ app.post('/api/translate', async (req, res) => {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json' 
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
-                messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" }, 
+                messages: [{
+                        role: "user",
+                        content: promptText
+                    }
+                ],
+                response_format: {
+                    type: "json_object"
+                },
                 temperature: 0.1
             })
         });
-        
+
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(`Groq API Error: ${response.status}`);
@@ -167,7 +201,7 @@ app.post('/api/translate', async (req, res) => {
 
         const data = await response.json();
         const parsedData = JSON.parse(data.choices[0].message.content);
-        
+
         try {
             await redis.set(cacheKey, parsedData);
         } catch (cacheSetErr) {}
@@ -175,29 +209,44 @@ app.post('/api/translate', async (req, res) => {
         res.json(parsedData);
     } catch (err) {
         console.error("Groq Error:", err);
-        res.status(500).json({ error: "Translation failed" });
+        res.status(500).json({
+            error: "Translation failed"
+        });
     }
 });
 
 // =======================================================================
 // 3. SENTENCE ANALYSIS ROUTE (Now powered by Groq 70B for speed!)
 // =======================================================================
-app.post('/api/analyze-sentence', async (req, res) => {
+app.post('/api/analyze-sentence', async(req, res) => {
     const { sentence } = req.body;
-    if (!sentence) return res.status(400).json({ error: "Sentence required" });
-    
-    const cleanSentence = sentence.trim();
-    if (cleanSentence.length > 200) return res.status(400).json({ error: "Sentence too long." });
+    if (!sentence)
+        return res.status(400).json({
+            error: "Sentence required"
+        });
 
-    const cacheKey = `sentence:v6:${cleanSentence.toLowerCase()}`;
+    const cleanSentence = sentence.trim();
+    if (cleanSentence.length > 200)
+        return res.status(400).json({
+            error: "Sentence too long."
+        });
+
+    const cacheKey = `sentence:v7:${cleanSentence.toLowerCase()}`;
     try {
         const cachedData = await redis.get(cacheKey);
-        if (cachedData) return res.json(cachedData);
+        if (cachedData)
+            return res.json(cachedData);
     } catch (e) {}
 
     // Keeping your exact Chain-of-Thought prompt!
-    const promptText = `Analyze this PERFECTLY CORRECT German sentence: "${cleanSentence}".
-    Break it down word by word into a JSON array.
+    const promptText = `Du analysierst einen bereits PERFEKT KORRIGIERTEN deutschen Satz: "${cleanSentence}".
+    Verändere KEINE Wörter. Deine EINZIGE Aufgabe ist es, den Satz Wort für Wort in ein JSON-Array zu zerlegen.
+
+    ACHTUNG FÜR DEINE KASUS-ANALYSE (Das 'kasus' Tag):
+    1. Pronomen wie 'uns'/'euch' sind tückisch! Prüfe immer das Verb, bevor du den Kasus festlegst.
+    2. Nach 'helfen', 'danken', 'gefallen', 'glauben' MUSS dein Tag 'Dativ' sein.
+    3. Nach 'glauben an' oder 'denken an' MUSS dein Tag 'Akkusativ' sein.
+
     Return STRICTLY a JSON object:
     {
       "wordBreakdown": [
@@ -206,8 +255,8 @@ app.post('/api/analyze-sentence', async (req, res) => {
           "baseForm": "Dictionary form",
           "pos": "STRICTLY IN GERMAN: Nomen, Verb, Artikel, Pronomen, Adjektiv, Präposition, Adverb, or Sonstiges",
           "englishMeaning": "Direct English translation in context",
-          "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv' or null.",
-          "grammarTip": "Ein winziger Grammatik-Hinweis. Do NOT include case."
+          "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv' oder null.",
+          "grammarTip": "Ein winziger Grammatik-Hinweis (z.B. 'Regelmäßiges Verb', 'Plural'). Do NOT include case here."
         }
       ]
     }`;
@@ -219,34 +268,45 @@ app.post('/api/analyze-sentence', async (req, res) => {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json' 
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
-                messages: [{ role: "user", content: promptText }],
-                response_format: { type: "json_object" }, // Guarantees JSON without markdown stripping
+                messages: [{
+                        role: "user",
+                        content: promptText
+                    }
+                ],
+                response_format: {
+                    type: "json_object"
+                }, // Guarantees JSON without markdown stripping
                 temperature: 0.1
             })
         });
 
-        if (!response.ok) throw new Error(`Groq API Error: ${response.status}`);
-        
+        if (!response.ok)
+            throw new Error(`Groq API Error: ${response.status}`);
+
         const data = await response.json();
         const parsedData = JSON.parse(data.choices[0].message.content);
-        
-        try { await redis.set(cacheKey, parsedData); } catch (e) {}
+
+        try {
+            await redis.set(cacheKey, parsedData);
+        } catch (e) {}
 
         res.json(parsedData);
     } catch (err) {
         console.error("Groq Sentence Error:", err);
-        res.status(500).json({ error: "Sentence analysis failed." });
+        res.status(500).json({
+            error: "Sentence analysis failed."
+        });
     }
 });
 
 // =======================================================================
 // 4. AI STORY GENERATOR ROUTE (Groq Powered)
 // =======================================================================
-app.get('/api/generate-reading', async (req, res) => {
+app.get('/api/generate-reading', async(req, res) => {
     try {
         const promptText = `Schreibe DREI kurze, sehr kreative und völlig unterschiedliche Lesetexte (Niveau A1-A2) auf Deutsch.
         
@@ -295,12 +355,18 @@ app.get('/api/generate-reading', async (req, res) => {
             },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
-                messages: [
-                    { role: "system", content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal." },
-                    { role: "user", content: promptText }
+                messages: [{
+                        role: "system",
+                        content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal."
+                    }, {
+                        role: "user",
+                        content: promptText
+                    }
                 ],
-                response_format: { type: "json_object" }, 
-                temperature: 0.9 
+                response_format: {
+                    type: "json_object"
+                },
+                temperature: 0.9
             })
         });
 
@@ -315,38 +381,56 @@ app.get('/api/generate-reading', async (req, res) => {
         res.json(jsonResult);
     } catch (error) {
         console.error("Groq Passage generation failed:", error);
-        res.status(500).json({ error: "Failed to generate reading passage" });
+        res.status(500).json({
+            error: "Failed to generate reading passage"
+        });
     }
 });
 
 // =======================================================================
 // 5. IMAGE ROUTE (Unsplash - Dual-Key Caching)
 // =======================================================================
-app.get('/api/image', async (req, res) => {
+app.get('/api/image', async(req, res) => {
     const { germanWord, searchQuery } = req.query;
-    if (!germanWord || !searchQuery) return res.status(400).json({ error: "Missing parameters" });
+    if (!germanWord || !searchQuery)
+        return res.status(400).json({
+            error: "Missing parameters"
+        });
 
     const imgCacheKey = `img:${germanWord.toLowerCase()}`;
     try {
         const cachedImg = await redis.get(imgCacheKey);
-        if (cachedImg) return res.json(cachedImg);
-    } catch (e) { console.error(e); }
+        if (cachedImg)
+            return res.json(cachedImg);
+    } catch (e) {
+        console.error(e);
+    }
 
-    const getFallback = (w) => ({ imageUrl: `./logo.png` });
+    const getFallback = (w) => ({
+        imageUrl: `./logo.png`
+    });
 
-    if (!process.env.UNSPLASH_ACCESS_KEY) return res.json(getFallback(germanWord));
+    if (!process.env.UNSPLASH_ACCESS_KEY)
+        return res.json(getFallback(germanWord));
 
     try {
         const response = await fetch(
-            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=1&content_filter=high`,
-            { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
-        );
-        if (!response.ok) throw new Error("Unsplash API Error");
+`https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=1&content_filter=high`, {
+                headers: {
+                    Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
+                }
+            });
+        if (!response.ok)
+            throw new Error("Unsplash API Error");
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
-            const imageData = { imageUrl: data.results[0].urls.regular };
-            try { await redis.set(imgCacheKey, imageData); } catch (e) {}
+            const imageData = {
+                imageUrl: data.results[0].urls.regular
+            };
+            try {
+                await redis.set(imgCacheKey, imageData);
+            } catch (e) {}
             return res.json(imageData);
         } else {
             return res.json(getFallback(germanWord));
@@ -357,7 +441,6 @@ app.get('/api/image', async (req, res) => {
     }
 });
 
-
 // =======================================================================
 // 6. DEDICATED SENTENCE TRANSLATION ROUTE (Google Cloud Translation API)
 // =======================================================================
@@ -367,7 +450,7 @@ const googleLangMap = {
     'English': 'en',
     'Arabic': 'ar',
     'Russian': 'ru',
-    'Dari': 'fa-AF',  
+    'Dari': 'fa-AF',
     'Farsi': 'fa',
     'Amharic': 'am',
     'Tigrinya': 'ti',
@@ -379,102 +462,124 @@ const googleLangMap = {
     'Armenian': 'hy'
 };
 
-app.post('/api/translate-sentence', async (req, res) => {
+app.post('/api/translate-sentence', async(req, res) => {
     const { sentence, targetLanguages } = req.body;
-    
+
     if (!sentence || !targetLanguages || targetLanguages.length === 0) {
-        return res.status(400).json({ error: "Missing sentence or target languages" });
+        return res.status(400).json({
+            error: "Missing sentence or target languages"
+        });
     }
 
     try {
         let translations = {};
         const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
-        
+
         // Safety check to prevent Vercel crashes
         if (!apiKey) {
             console.error("CRITICAL: GOOGLE_TRANSLATE_API_KEY is missing from environment variables!");
-            return res.status(500).json({ error: "Translation service is temporarily unconfigured." });
+            return res.status(500).json({
+                error: "Translation service is temporarily unconfigured."
+            });
         }
 
         const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
 
         // 2. Fetch all translations simultaneously using Promise.all
-        await Promise.all(targetLanguages.map(async (lang) => {
-            const targetLangCode = googleLangMap[lang];
+        await Promise.all(targetLanguages.map(async(lang) => {
+                const targetLangCode = googleLangMap[lang];
 
-            if (!targetLangCode) {
-                translations[lang] = "Language not mapped.";
-                return;
-            }
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        q: sentence,
-                        target: targetLangCode,
-                        source: 'de', // Force source language to German to prevent mis-detections
-                        format: 'text'
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    translations[lang] = data.data.translations[0].translatedText;
-                } else {
-                    console.error(`Google API Error for ${lang}: ${response.status}`);
-                    translations[lang] = "❌ Translation error.";
+                if (!targetLangCode) {
+                    translations[lang] = "Language not mapped.";
+                    return;
                 }
-            } catch (e) {
-                console.error(`Google Fetch Failed for ${lang}:`, e);
-                translations[lang] = "❌ Translation failed.";
-            }
-        }));
 
-        res.json({ translations });
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            q: sentence,
+                            target: targetLangCode,
+                            source: 'de', // Force source language to German to prevent mis-detections
+                            format: 'text'
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        translations[lang] = data.data.translations[0].translatedText;
+                    } else {
+                        console.error(`Google API Error for ${lang}: ${response.status}`);
+                        translations[lang] = "❌ Translation error.";
+                    }
+                } catch (e) {
+                    console.error(`Google Fetch Failed for ${lang}:`, e);
+                    translations[lang] = "❌ Translation failed.";
+                }
+            }));
+
+        res.json({
+            translations
+        });
     } catch (err) {
         console.error("Google Master Error:", err);
-        res.status(500).json({ error: "❌ Translation failed completely" });
+        res.status(500).json({
+            error: "❌ Translation failed completely"
+        });
     }
 });
 
 // =======================================================================
-// 🚨 FAST GRAMMAR CORRECTION (Powered by Gemini 2.5 Flash-Lite)
+// 7. FAST GRAMMAR CORRECTION (Powered by Gemini 2.5 Flash-Lite)
 // =======================================================================
-app.post('/api/fast-correct', async (req, res) => {
+app.post('/api/fast-correct', async(req, res) => {
     const { sentence } = req.body;
-    if (!sentence) return res.status(400).json({ error: "Sentence required" });
+    if (!sentence)
+        return res.status(400).json({
+            error: "Sentence required"
+        });
 
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        
+
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
                 system_instruction: {
-                    parts: [{ 
-                        // 📍 FIX: Our new, highly detailed prompt!
-                        text: `Du bist ein strenger, hochpräziser Deutschlehrer. 
-Achte GANZ GENAU auf:
-1. Kasusrektion bei Verben (z.B. 'helfen', 'danken' verlangen Dativ).
-2. Verben mit Präpositionen (z.B. 'glauben an', 'denken an', 'warten auf' verlangen zwingend den AKKUSATIV).
-3. Groß- und Kleinschreibung (Nomen und Satzanfänge MÜSSEN großgeschrieben werden).
+                    parts: [{
+                            // 📍 FIX: Our new, highly detailed prompt!
+                            text: `Du bist ein strenger, hochpräziser Deutschlehrer für A1-B1 Schüler.
+								Prüfe den Text GANZ GENAU auf folgende typische Fehler (ACHTUNG!):
+								1. REINE DATIV-VERBEN: Verben wie 'helfen', 'danken', 'gefallen', 'gehören', 'folgen', 'antworten', 'glauben', 'gratulieren' und 'schmecken' verlangen IMMER Dativ (z.B. 'Ich helfe dir', NICHT 'dich').
+								2. VERBEN MIT PRÄPOSITION: 'glauben an', 'denken an', 'sich erinnern an', 'warten auf' und 'sich freuen auf/über' verlangen zwingend AKKUSATIV (z.B. 'Ich glaube an dich').
+								3. AMBIGUE PRONOMEN: 'uns' und 'euch' können Akkusativ oder Dativ sein! Prüfe das Verb (z.B. 'Ich helfe euch' = Dativ).
+								4. GEFÜHLE & ZUSTÄNDE (False Friends): Es heißt 'Mir ist kalt/heiß/langweilig' (NICHT 'Ich bin kalt') und 'Mir geht es gut' (NICHT 'Ich bin gut').
+								5. GROß- UND KLEINSCHREIBUNG: Nomen MÜSSEN immer großgeschrieben werden.
 
-Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
-{
-  "originalSentence": "Der Text vom Benutzer",
-  "wasCorrected": true,
-  "correctedSentence": "Der grammatikalisch und orthografisch perfekte Satz.",
-  "grammarExplanation": "Eine sehr kurze, präzise Erklärung auf Deutsch, warum du das korrigiert hast (Welcher Kasus? Welche Präposition?). Wenn der Satz komplett richtig war, lobe den Schüler kurz."
-}` 
-                    }]
+								Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
+								{
+								  "originalSentence": "Der Text vom Benutzer",
+								  "wasCorrected": true,
+								  "correctedSentence": "Der grammatikalisch und orthografisch perfekte Satz.",
+								  "grammarExplanation": "Eine sehr kurze, präzise Erklärung auf Deutsch, warum du das korrigiert hast (Welcher Kasus? Welche Regel?). Wenn der Satz komplett richtig war, lobe den Schüler kurz."
+								}`
+                        }
+                    ]
                 },
                 contents: [{
-                    role: "user",
-                    parts: [{ text: `Prüfe diesen Text: "${sentence}"` }]
-                }],
+                        role: "user",
+                        parts: [{
+                                text: `Prüfe diesen Text: "${sentence}"`
+                            }
+                        ]
+                    }
+                ],
                 generationConfig: {
                     response_mime_type: "application/json",
                     temperature: 0.1
@@ -482,22 +587,21 @@ Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
             })
         });
 
-        if (!response.ok) throw new Error(`Gemini Flash-Lite API Error: ${response.status}`);
-        
+        if (!response.ok)
+            throw new Error(`Gemini Flash-Lite API Error: ${response.status}`);
+
         const data = await response.json();
         // Gemini wraps the string response in the text property, we parse it into a real JSON object
         const parsedData = JSON.parse(data.candidates[0].content.parts[0].text);
-        
+
         res.json(parsedData);
     } catch (err) {
         console.error("Flash-Lite Correction Error:", err);
-        res.status(500).json({ error: "Correction failed." });
+        res.status(500).json({
+            error: "Correction failed."
+        });
     }
 });
-
-
-
-
 
 // --- VERCEL EXPORT ---
 if (process.env.NODE_ENV !== 'production') {
