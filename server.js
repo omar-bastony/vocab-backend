@@ -261,9 +261,10 @@ app.post('/api/analyze-sentence', async(req, res) => {
     const cacheKey = `sentence:v8:${cleanSentence.toLowerCase()}`;
     try {
         const cachedData = await redis.get(cacheKey);
-        if (cachedData)
+        if (cachedData) {
 			console.log("⚡ Served SENTENCE ANALYSIS from Cache!");
             return res.json(cachedData);
+		}
     } catch (e) {}
 	
 	// 📍 2. JavaScript does the splitting!
