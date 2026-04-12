@@ -145,7 +145,7 @@ app.post('/api/spellcheck', async(req, res) => {
 });
 
 // =======================================================================
-// 2. MAIN TRANSLATION ROUTE (Groq Powered)
+// 2. MAIN TRANSLATION ROUTE / WORD-MODE (Groq Powered)
 // =======================================================================
 app.post('/api/translate', async(req, res) => {
     const { word } = req.body;
@@ -189,7 +189,7 @@ app.post('/api/translate', async(req, res) => {
         "word": "The correctly spelled singular base form of the word (e.g., if input is 'Äpfel' return 'Apfel'). Pay strict attention to correct umlauts!",
         "partOfSpeech": "noun" or "verb" or "other",
         "article": "der/die/das" (The correct article for the SINGULAR noun, e.g., 'der' for 'Apfel'. null if not a noun),
-        "pluralTip": "The correct plural form including umlauts if applicable (e.g., 'die Äpfel'). null if not a noun",
+        "pluralTip": "ONLY the German plural form with its article (e.g., 'die Äpfel'). DO NOT include any English text, notes, brackets, or explanations. If the noun has no plural, return 'kein Plural'. null if not a noun",
         "conjugationTips": "e.g., ich gehe, du gehst, er/sie/es geht (only if verb, otherwise null)",
         "example": "A simple A1/A2 German example sentence."
       },
