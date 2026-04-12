@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('germanWordTitle').innerHTML = `<div class="fade-in" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 0.5rem; padding-left: 4px;">
                 <lottie-player src="loading.json" background="transparent" speed="1" style="width: 60px; height: 60px;" loop autoplay></lottie-player>
-                <div class="shimmer" style="height: 12px; width: 280px; border-radius: 4px;"></div>
+                <div class="shimmer" style="height: 12px; width: 180px; border-radius: 4px;"></div>
             </div>`;
         document.getElementById('grammarTips').innerHTML = '';
         document.getElementById('germanExample').innerHTML = '';
