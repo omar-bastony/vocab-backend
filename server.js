@@ -33,31 +33,25 @@ app.get('/api/wakeup', (req, res) => res.json({
 	
 
 // =======================================================================
-// 🛡️ API RETRY UTILITY (Exponential Backoff)
+// 🛡️ API RETRY UTILITY (Exponential Backoff + Deep Logging)
 // =======================================================================
 async function fetchWithRetry(url, options, maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         try {
             const response = await fetch(url, options);
-            
-            // If the response is successful, return it immediately
             if (response.ok) return response;
 
-            // If we get a 400 or 500 error, throw an error to trigger the catch block
-            throw new Error(`API returned status: ${response.status}`);
+            // 📍 FIX: Read the exact error message from the API!
+            const errorText = await response.text();
+            throw new Error(`Status ${response.status}: ${errorText}`);
             
         } catch (error) {
-            // If this was our last attempt, throw the error so the frontend knows it failed
             if (i === maxRetries - 1) {
-                console.error(`❌ Fetch failed after ${maxRetries} attempts:`, error.message);
+                console.error(`❌ Fetch failed after ${maxRetries} attempts:\n`, error.message);
                 throw error;
             }
-            
-            // Otherwise, calculate a delay (500ms, then 1000ms, then 2000ms)
             const delay = Math.pow(2, i) * 500;
-            console.warn(`⚠️ API Error (${error.message}). Retrying in ${delay}ms... (Attempt ${i + 1} of ${maxRetries})`);
-            
-            // Wait for the delay before the loop restarts
+            console.warn(`⚠️ API Error. Retrying in ${delay}ms... (Attempt ${i + 1} of ${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
@@ -313,7 +307,7 @@ app.post('/api/analyze-sentence', async(req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama3-8b-8192", // or whichever model you are using
+                model: "llama-3.3-70b-versatile", // or whichever model you are using
                 messages: [{ role: "user", content: promptText }],
                 response_format: { type: "json_object" },
                 temperature: 0.1
