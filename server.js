@@ -280,14 +280,15 @@ app.post('/api/analyze-sentence', async(req, res) => {
     KRITISCHE REGELN:
     1. Dein 'wordBreakdown' Array MUSS EXAKT ${exactWordCount} Elemente enthalten.
     2. Bearbeite die Wörter in GENAU der Reihenfolge, in der sie oben im Array stehen.
-    3. Kasus-Regel: Nach 'helfen', 'danken', 'glauben' MUSS Dativ stehen. Nach 'glauben an' MUSS Akkusativ stehen. Prüfe bei Pronomen ('ich', 'mir', 'euch') immer das Verb.
+    3. Kasus-Regel: Nach 'helfen', 'danken', 'glauben' MUSS Dativ stehen. Nach 'glauben an' MUSS Akkusativ stehen.
+    4. BASE FORMS (Over-Stemming verboten!): Pronominaladverbien und Adverbien (z.B. 'deinetwegen', 'meinetwegen', 'deswegen', 'darauf') sind eigenständige Wörter! Die baseForm von 'deinetwegen' ist STRIKT 'deinetwegen' (NICHT 'dein').
 
     Return STRICTLY a JSON object:
     {
       "wordBreakdown": [
         {
           "word": "Exact word from the array",
-          "baseForm": "Dictionary form",
+          "baseForm": "Dictionary form (Regel 4 beachten!)",
           "pos": "STRICTLY IN GERMAN: Nomen, Verb, Artikel, Pronomen, Adjektiv, Präposition, Adverb, or Sonstiges",
           "englishMeaning": "Direct English translation in context",
           "kasus": "STRICTLY choose one if applicable: 'Nominativ', 'Akkusativ', 'Dativ', 'Genitiv' oder null.",
