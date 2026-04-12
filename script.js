@@ -391,8 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	// 📍 NEW: Reset the mode state on every new search
     document.body.classList.remove('sentence-mode');
 	
-			// 🛑 TEMPORARY DEV HACK: Pause execution for 3 seconds (3000ms)
-				await new Promise(resolve => setTimeout(resolve, 100000));
 
     if (wordCount > 1) {
         // ==========================================
@@ -418,7 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
           translationGrid.appendChild(skeleton);
         });
 		
-
+			// 🛑 TEMPORARY DEV HACK: Pause execution for 3 seconds (3000ms)
+				await new Promise(resolve => setTimeout(resolve, 100000));
 
         try {
             // 📍 PHASE 1: INSTANT GRAMMAR CHECK (OpenAI / Gemini Flash-Lite)
@@ -548,7 +547,8 @@ document.addEventListener('DOMContentLoaded', () => {
           skeleton.className = 'translation-card shimmer'; skeleton.innerHTML = '<div style="height: 100px;"></div>';
           translationGrid.appendChild(skeleton);
         });
-
+			// 🛑 TEMPORARY DEV HACK: Pause execution for 3 seconds (3000ms)
+				await new Promise(resolve => setTimeout(resolve, 100000));
         try {
           // 📍 PHASE 1: Fetch Grammar & Word Meanings (Groq)
           const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
