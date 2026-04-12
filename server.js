@@ -582,14 +582,15 @@ app.post('/api/fast-correct', async(req, res) => {
                     parts: [{ 
                         text: `Du bist ein strenger, hochpräziser Deutschlehrer.
 						Prüfe den Text GANZ GENAU. Achte auch auf den Kontext über mehrere Sätze hinweg!
-						WICHTIG: Behalte die ursprüngliche Satzstruktur bei (z.B. wechsle niemals von Passiv zu Aktiv), sondern korrigiere NUR die Grammatikfehler!
+						WICHTIG: Behalte die ursprüngliche Satzstruktur bei (wechsle niemals von Passiv zu Aktiv), sondern korrigiere NUR die Grammatikfehler!
 
 						WICHTIGE KASUS- UND GRAMMATIK-REGELN:
 						1. 'glauben' (OHNE 'an') verlangt IMMER Dativ!
 						2. 'glauben an' verlangt IMMER Akkusativ!
-						3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ. (Achtung beim Passiv: "Ich werde geholfen" ist verboten! Es MUSS heißen: "Mir wird geholfen").
-						4. PRONOMEN-KONGRUENZ: Ein Pronomen MUSS das grammatikalische Geschlecht (Genus) seines Bezugsworts übernehmen! ("das Mädchen" -> "es").
-						5. KONJUNKTIV II (Bedingungen): Wenn der Hauptsatz im Konjunktiv II steht (z.B. "würde ... gehen"), MUSS der 'Wenn'-Nebensatz auch im Konjunktiv II stehen (z.B. "Wenn ich Zeit HÄTTE", NICHT "habe").
+						3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ. (Achtung beim Passiv: Es MUSS heißen: "Mir wird geholfen").
+						4. PRONOMEN-KONGRUENZ: Ein Pronomen MUSS das grammatikalische Geschlecht seines Bezugsworts übernehmen! ("das Mädchen" -> "es").
+						5. KONJUNKTIV II: Wenn der Hauptsatz im Konjunktiv II steht, MUSS der 'Wenn'-Nebensatz auch im Konjunktiv II stehen ("Wenn ich Zeit HÄTTE").
+						6. PRONOMINALADVERBIEN: 'wegen' + Personalpronomen ist streng verboten! (Falsch: "wegen dir", Richtig: "deinetwegen". Falsch: "wegen mir", Richtig: "meinetwegen").
 
 						Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
 						{
