@@ -474,20 +474,10 @@ app.get('/api/image', async(req, res) => {
 // 6. DEDICATED SENTENCE TRANSLATION ROUTE (Google Cloud Translation API)
 // =======================================================================
 
-// 1. Map your frontend language names to Google's official ISO codes
 const googleLangMap = {
-    'English': 'en',
-    'Arabic': 'ar',
-    'Russian': 'ru',
-    'Dari': 'fa-AF',
-    'Farsi': 'fa',
-    'Amharic': 'am',
-    'Tigrinya': 'ti',
-    'Spanish': 'es',
-    'French': 'fr',
-    'Turkish': 'tr',
-    'Ukrainian': 'uk',
-    'Somali': 'so',
+    'English': 'en', 'Arabic': 'ar', 'Russian': 'ru', 'Dari': 'fa-AF',
+    'Farsi': 'fa', 'Amharic': 'am', 'Tigrinya': 'ti', 'Spanish': 'es',
+    'French': 'fr', 'Turkish': 'tr', 'Ukrainian': 'uk', 'Somali': 'so',
     'Armenian': 'hy'
 };
 
@@ -495,68 +485,99 @@ app.post('/api/translate-sentence', async(req, res) => {
     const { sentence, targetLanguages } = req.body;
 
     if (!sentence || !targetLanguages || targetLanguages.length === 0) {
-        return res.status(400).json({
-            error: "Missing sentence or target languages"
-        });
+        return res.status(400).json({ error: "Missing sentence or target languages" });
     }
 
+    const cleanSentence = sentence.toLowerCase().trim();
+    
+    // 📍 1. SIMPLIFIED CACHE KEY
+    // We no longer append the languages to the key. This key now holds the Master Dictionary!
+    // Bumped to v11 to avoid clashing with the old cache structure.
+    const cacheKey = `matrix:v11:${cleanSentence}`;
+
+    // Helper Function: Extracts ONLY the requested languages from the Master Dictionary
+    const filterRequestedLanguages = (allTranslations) => {
+        let filtered = {};
+        targetLanguages.forEach(lang => {
+            if (allTranslations[lang]) {
+                filtered[lang] = allTranslations[lang];
+            } else {
+                filtered[lang] = "❌ Translation missing.";
+            }
+        });
+        return filtered;
+    };
+
+    // 📍 2. DATABASE FIRST: Check the Cache
     try {
-        let translations = {};
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData && cachedData.translations) {
+            console.log("⚡ Served Global Master Dictionary from Cache!");
+            // Only send back the languages the user actually asked for!
+            return res.json({ 
+                translations: filterRequestedLanguages(cachedData.translations) 
+            }); 
+        }
+    } catch (cacheErr) {
+        console.error("Redis Cache Read Error:", cacheErr);
+    }
+
+    // 📍 3. CACHE MISS: Generate the Master Dictionary
+    try {
+        let masterTranslations = {};
         const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
 
-        // Safety check to prevent Vercel crashes
         if (!apiKey) {
-            console.error("CRITICAL: GOOGLE_TRANSLATE_API_KEY is missing from environment variables!");
-            return res.status(500).json({
-                error: "Translation service is temporarily unconfigured."
-            });
+            return res.status(500).json({ error: "Translation service unconfigured." });
         }
 
         const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+        
+        // Grab ALL supported languages, not just the ones the user requested
+        const allSupportedLangs = Object.keys(googleLangMap);
 
-        // 2. Fetch all translations simultaneously using Promise.all
-        await Promise.all(targetLanguages.map(async(lang) => {
+        // Fetch all 13 translations simultaneously
+        await Promise.all(allSupportedLangs.map(async(lang) => {
             const targetLangCode = googleLangMap[lang];
 
-            if (!targetLangCode) {
-                translations[lang] = "Language not mapped.";
-                return;
-            }
-
             try {
-                // 📍 FIX: Replaced standard fetch with fetchWithRetry (3 attempts)
                 const response = await fetchWithRetry(url, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         q: sentence,
                         target: targetLangCode,
-                        source: 'de', // Force source language to German
+                        source: 'de', 
                         format: 'text'
                     })
                 }, 3);
 
-                // Because fetchWithRetry throws an error on failure, 
-                // if we reach this line, we know the response is 100% successful!
                 const data = await response.json();
-                translations[lang] = data.data.translations[0].translatedText;
+                masterTranslations[lang] = data.data.translations[0].translatedText;
                 
             } catch (e) {
-                console.error(`Google Fetch Failed for ${lang} after 3 attempts:`, e);
-                translations[lang] = "❌ Translation failed.";
+                console.error(`Google Fetch Failed for ${lang}:`, e);
+                masterTranslations[lang] = "❌ Translation failed.";
             }
         }));
 
-        res.json({
-            translations
+        const finalData = { translations: masterTranslations };
+
+        // 📍 4. SAVE TO CACHE: Store all 13 languages for future users
+        try {
+            await redis.set(cacheKey, finalData);
+        } catch (cacheSetErr) {
+            console.error("Redis Cache Write Error:", cacheSetErr);
+        }
+
+        // 📍 5. RESPOND: Only send the requested languages back to the UI
+        res.json({ 
+            translations: filterRequestedLanguages(masterTranslations) 
         });
+
     } catch (err) {
         console.error("Google Master Error:", err);
-        res.status(500).json({
-            error: "❌ Translation failed completely"
-        });
+        res.status(500).json({ error: "❌ Translation failed completely" });
     }
 });
 
@@ -570,6 +591,20 @@ app.post('/api/fast-correct', async(req, res) => {
             error: "Sentence required"
         });
 
+	// 1. Generate the unique key for this sentence
+    const cacheKey = `fastcorrect:v1:${sentence.toLowerCase().trim()}`;
+
+    try {
+        // 2. DATABASE FIRST: Check Upstash Redis
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData) {
+            console.log("⚡ Served Grammar Correction from Cache!");
+            return res.json(cachedData); // Bypasses the rest of the code!
+        }
+    } catch (cacheErr) {
+        console.error("Redis Cache Read Error:", cacheErr);
+    }
+	
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
