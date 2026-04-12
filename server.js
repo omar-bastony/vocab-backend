@@ -576,26 +576,32 @@ app.post('/api/fast-correct', async(req, res) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+				
+				
                 system_instruction: {
-									parts: [{ 
-										text: `Du bist ein strenger, hochpräziser Deutschlehrer.
-												Prüfe den Text GANZ GENAU. Achte auch auf den Kontext über mehrere Sätze hinweg!
+                    parts: [{ 
+                        text: `Du bist ein strenger, hochpräziser Deutschlehrer.
+						Prüfe den Text GANZ GENAU. Achte auch auf den Kontext über mehrere Sätze hinweg!
+						WICHTIG: Behalte die ursprüngliche Satzstruktur bei (z.B. wechsle niemals von Passiv zu Aktiv), sondern korrigiere NUR die Grammatikfehler!
 
-												WICHTIGE KASUS- UND GRAMMATIK-REGELN:
-												1. 'glauben' (OHNE 'an') verlangt IMMER Dativ! (Beispiel: 'Ich glaube euch' -> 'euch' ist Dativ).
-												2. 'glauben an' verlangt IMMER Akkusativ! (Beispiel: 'Ich glaube an euch' -> 'euch' ist Akkusativ).
-												3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ.
-												4. PRONOMEN-KONGRUENZ: Ein Pronomen MUSS das grammatikalische Geschlecht (Genus) seines Bezugsworts übernehmen! (Beispiel: "das Mädchen" ist sächlich (das), also MUSS es heißen: "Wo ist das Mädchen? Ich sehe ES nicht." NIEMALS "sie").
+						WICHTIGE KASUS- UND GRAMMATIK-REGELN:
+						1. 'glauben' (OHNE 'an') verlangt IMMER Dativ!
+						2. 'glauben an' verlangt IMMER Akkusativ!
+						3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ. (Achtung beim Passiv: "Ich werde geholfen" ist verboten! Es MUSS heißen: "Mir wird geholfen").
+						4. PRONOMEN-KONGRUENZ: Ein Pronomen MUSS das grammatikalische Geschlecht (Genus) seines Bezugsworts übernehmen! ("das Mädchen" -> "es").
+						5. KONJUNKTIV II (Bedingungen): Wenn der Hauptsatz im Konjunktiv II steht (z.B. "würde ... gehen"), MUSS der 'Wenn'-Nebensatz auch im Konjunktiv II stehen (z.B. "Wenn ich Zeit HÄTTE", NICHT "habe").
 
-												Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
-												{
-												  "originalSentence": "Der Text vom Benutzer",
-												  "wasCorrected": true oder false,
-												  "correctedSentence": "Der perfekte Satz.",
-												  "grammarExplanation": "Wenn korrigiert: Erkläre den Fehler. Wenn der Satz SCHON RICHTIG war: Lobe den Schüler kurz. BEHAUPTE NIEMALS, dass 'glauben' (ohne an) den Akkusativ verlangt!"
-												}` 
-									}]
+						Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
+						{
+						  "originalSentence": "Der Text vom Benutzer",
+						  "wasCorrected": true oder false,
+						  "correctedSentence": "Der perfekte Satz.",
+						  "grammarExplanation": "Erkläre den Fehler präzise."
+						}` 
+                    }]
                 },
+				
+				
                 contents: [{
                     role: "user",
                     parts: [{ text: `Prüfe diesen Text: "${sentence}"` }]
