@@ -390,6 +390,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// 📍 NEW: Reset the mode state on every new search
     document.body.classList.remove('sentence-mode');
+	
+			// 🛑 TEMPORARY DEV HACK: Pause execution for 3 seconds (3000ms)
+				await new Promise(resolve => setTimeout(resolve, 100000));
 
     if (wordCount > 1) {
         // ==========================================
@@ -415,8 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
           translationGrid.appendChild(skeleton);
         });
 		
-		// 🛑 TEMPORARY DEV HACK: Pause execution for 3 seconds (3000ms)
-				await new Promise(resolve => setTimeout(resolve, 10000));
+
 
         try {
             // 📍 PHASE 1: INSTANT GRAMMAR CHECK (OpenAI / Gemini Flash-Lite)
