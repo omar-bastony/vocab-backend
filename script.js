@@ -362,7 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
     translateBtn.click(); 
   });
 
-  // --- Translation Logic ---
   // --- Translation Logic (Merged Sentence & Word Modes) ---
   translateBtn.addEventListener('click', async () => {
     const text = germanInput.value.trim();
@@ -402,11 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 1. Setup the "Thinking" UI for the Grammar Section immediately
         if (sentenceArea) {
-            sentenceArea.innerHTML = `
-            <div class="fade-in" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 0.5rem; padding-left: 4px;">
+            sentenceArea.innerHTML = '<div class="fade-in" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; margin-top: 0.5rem; padding-left: 4px;">
                 <lottie-player src="loading.json" background="transparent" speed="1" style="width: 60px; height: 60px;" loop autoplay></lottie-player>
                 <div class="shimmer" style="height: 12px; width: 280px; border-radius: 4px;"></div>
-            </div>`;
+            </div>';
             sentenceArea.classList.remove('hidden');
         }
 
