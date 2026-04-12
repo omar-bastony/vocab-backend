@@ -262,6 +262,7 @@ app.post('/api/analyze-sentence', async(req, res) => {
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData)
+			console.log("⚡ Served SENTENCE ANALYSIS from Cache!");
             return res.json(cachedData);
     } catch (e) {}
 	
