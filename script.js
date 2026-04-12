@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wordDetailsArea.style.display = 'block'; wordDetailsArea.classList.remove('slide-up');
         
         document.getElementById('germanWordTitle').innerHTML = `<div style="display: flex; align-items: center; height: 2.2rem;">
-             <lottie-player src="loading.json" background="transparent" speed="1" style="width: 40px; height: 40px;" loop autoplay></lottie-player>
+             <lottie-player src="loading.json" background="transparent" speed="1" style="width: 60px; height: 60px;" loop autoplay></lottie-player>
           </div>`;
         document.getElementById('grammarTips').innerHTML = '';
         document.getElementById('germanExample').innerHTML = '<div class="shimmer" style="height: 1rem; width: 80%; border-radius: 4px; margin-top: 10px;"></div>';
