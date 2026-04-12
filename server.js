@@ -577,24 +577,25 @@ app.post('/api/fast-correct', async(req, res) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 system_instruction: {
-										parts: [{
-												text: `Du bist ein strenger, hochpräziser Deutschlehrer.
-														Prüfe den Text GANZ GENAU. 
+									parts: [{ 
+										text: `Du bist ein strenger, hochpräziser Deutschlehrer.
+												Prüfe den Text GANZ GENAU. Achte auch auf den Kontext über mehrere Sätze hinweg!
 
-														WICHTIGE KASUS-REGELN:
-														1. 'glauben' (OHNE 'an') verlangt IMMER Dativ! (Beispiel: 'Ich glaube euch' -> 'euch' ist Dativ).
-														2. 'glauben an' verlangt IMMER Akkusativ! (Beispiel: 'Ich glaube an euch' -> 'euch' ist Akkusativ).
-														3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ.
+												WICHTIGE KASUS- UND GRAMMATIK-REGELN:
+												1. 'glauben' (OHNE 'an') verlangt IMMER Dativ! (Beispiel: 'Ich glaube euch' -> 'euch' ist Dativ).
+												2. 'glauben an' verlangt IMMER Akkusativ! (Beispiel: 'Ich glaube an euch' -> 'euch' ist Akkusativ).
+												3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ.
+												4. PRONOMEN-KONGRUENZ: Ein Pronomen MUSS das grammatikalische Geschlecht (Genus) seines Bezugsworts übernehmen! (Beispiel: "das Mädchen" ist sächlich (das), also MUSS es heißen: "Wo ist das Mädchen? Ich sehe ES nicht." NIEMALS "sie").
 
-														Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:{
-														  "originalSentence": "Der Text vom Benutzer",
-														  "wasCorrected": true oder false,
-														  "correctedSentence": "Der perfekte Satz.",
-														  "grammarExplanation": "Wenn korrigiert: Erkläre den Fehler. Wenn der Satz SCHON RICHTIG war: Lobe den Schüler kurz und nenne den korrekten Kasus (z.B. 'Richtig! Das Verb glauben verlangt den Dativ.'). BEHAUPTE NIEMALS, dass 'glauben' (ohne an) den Akkusativ verlangt!"
-														}`
-											}
-										]
-									},
+												Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
+												{
+												  "originalSentence": "Der Text vom Benutzer",
+												  "wasCorrected": true oder false,
+												  "correctedSentence": "Der perfekte Satz.",
+												  "grammarExplanation": "Wenn korrigiert: Erkläre den Fehler. Wenn der Satz SCHON RICHTIG war: Lobe den Schüler kurz. BEHAUPTE NIEMALS, dass 'glauben' (ohne an) den Akkusativ verlangt!"
+												}` 
+									}]
+                },
                 contents: [{
                     role: "user",
                     parts: [{ text: `Prüfe diesen Text: "${sentence}"` }]
