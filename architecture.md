@@ -18,9 +18,11 @@ Key Infrastructure:
 
 Resilience: EVERY external API call uses a custom fetchWithRetry (Exponential Backoff) utility to silently catch 429/503 errors and retry up to 3 times.
 
-Database First: Uses Upstash Redis (v10 cache keys) to check the global cache for master translations and sentence analysis before hitting any AI.
+Database First (Eager Caching): Uses Upstash Redis (v12 cache keys). The Google Translation route uses Eager Caching to generate and store a 13-language Master Dictionary on the first query, achieving near 100% cache hits for subsequent users.
 
-Anti-Hallucination Guardrails: Uses strict Negative Constraints in prompts (e.g., distinguishing glauben + Dativ vs glauben an + Akkusativ).
+Cache Normalization: User input is stripped of punctuation, lowercased, and trimmed before creating a cache key. "ich bin hier" and "Ich bin hier." hit the exact same cache entry, saving database space.
+
+Dynamic AI Evaluation: The server uses strict JavaScript string comparison to dynamically calculate the wasCorrected boolean on the fly, entirely overriding the LLM's flaky boolean logic.
 
 JS Pre-Splitting: The backend uses JavaScript to split sentences into exact arrays (exactWordCount) before passing them to Groq, mathematically preventing the LLM from dropping duplicate words in its JSON output.
 
@@ -54,17 +56,21 @@ app.post('/api/fast-correct') [The Gatekeeper - Gemini Flash-Lite/OpenAI]
 
 Purpose: Instantly checks a German sentence for case errors and orthography.
 
-Prompting: Uses strict Negative Constraints and explicit rule lists (e.g., distinguishing Dative-only verbs vs. Two-way prepositions) to prevent AI hallucinations. Returns a corrected string and explanation.
+Dynamic Evaluation Override: Ignores the AI's wasCorrected opinion entirely. Uses JS to strictly compare the normalized input string against the corrected string before saving to Redis.
+
+Prompting: Uses strict Negative Constraints and explicit rule lists (e.g., distinguishing Dative-only verbs vs. Two-way prepositions).
 
 app.post('/api/translate-sentence') [Google Cloud Translation v2]
 
-Purpose: Translates the perfectly corrected German sentence into 13 target languages simultaneously using Promise.all.
+Purpose: Translates the perfectly corrected German sentence into 13 target languages simultaneously.
+
+Eager Caching: Fetches all 13 languages on a cache miss and saves them as a Master Dictionary to Redis. On a cache hit, it filters the Master Dictionary and returns only what the user's UI requested.
 
 app.post('/api/analyze-sentence') [Word Card Builder - Groq]
 
 Purpose: Breaks down a full sentence into interactive vocabulary cards.
 
-Safety Mechanism (JS Pre-split): The backend uses cleanSentence.split(/\s+/) to calculate the exact word count. It forces Groq to process that exact array, mathematically preventing the LLM from dropping duplicate words (e.g., two "ich"s in one sentence). Cache keys are at v10.
+Safety Mechanism (JS Pre-split): Uses cleanSentence.split(/\s+/) to calculate the exact word count and forces Groq to process that exact array, mathematically preventing dropped duplicate words.
 
 app.post('/api/translate') [Single Word Deep Dive - Groq]
 
@@ -78,21 +84,15 @@ app.get('/api/generate-reading') [Groq]
 
 Generates 3 highly creative, completely random A1-A2 German reading passages (Temp: 0.9).
 
-app.get('/api/image') [Unsplash API]
-
-Fetches contextual background images. Uses Upstash Redis caching based on the strict German word key.
-
 4. Frontend Data Flow: Progressive UI (script.js)
-The translateBtn intercepts the submit and auto-detects Single Word Mode vs. Sentence Mode by counting spaces. It explicitly resets the UI state (hiding elements, removing theme classes) on every new search.
+The translateBtn intercepts the submit and auto-detects Single Word Mode vs. Sentence Mode by counting spaces.
 
 The Sentence Mode Flow (Linear & Progressive)
-When a user submits a full sentence, the UI executes a progressive loading state to provide instant feedback without freezing:
-
 Phase 1: Instant Grammar Check
 
 Fetches from /api/fast-correct.
 
-If grammar was wrong, instantly reveals the ✨ Korrigiert alert with the explanation.
+If wasCorrected is true, instantly reveals the ✨ Korrigiert alert with the explanation.
 
 The grammatically perfect sentence is locked in as the finalSentence for all remaining steps.
 
@@ -100,7 +100,7 @@ Phase 2: Flawless Translation
 
 Fetches from /api/translate-sentence using ONLY the finalSentence.
 
-Populates the translation grid (13 languages) with 100% accuracy since Google never sees the user's bad grammar.
+Populates the translation grid with near-instant speed due to eager caching.
 
 Phase 3: Deep Analysis (Background Task)
 
@@ -113,15 +113,19 @@ Fetches /api/translate.
 
 Changes the global CSS theme based on noun gender.
 
-Triggers background fetches for /api/image and Google translated example sentences, replacing shimmers dynamically.
+Triggers background fetches for /api/image and Google translated example sentences.
 
 5. System Resilience & Prompt Engineering
 Infrastructure:
-Exponential Backoff: The fetchWithRetry wrapper guarantees that temporary 503 (Service Unavailable) or 429 (Rate Limit) errors from Groq, Gemini, or Google are handled silently with escalating delays (500ms, 1000ms, 2000ms) up to 3 times before throwing a client-side error.
+Exponential Backoff: The fetchWithRetry wrapper guarantees that temporary 503 (Service Unavailable) or 429 (Rate Limit) errors from external APIs are handled silently with escalating delays up to 3 times.
 
-Global Caching Strategy: Upstash Redis is used aggressively. Cache keys are versioned systematically (e.g., sentence:v10:[query]) allowing for instant database "wipes" simply by bumping the version number in server.js when prompt logic is upgraded.
+Cache Normalization Utility: All incoming sentences are stripped of punctuation, lowercased, and have extra spaces removed (normalizeForCache(text)) before a cache key is generated. This prevents database bloat.
+
+Global Caching Strategy: Upstash Redis is used aggressively. Cache keys are versioned systematically (e.g., sentence:v12:[query]) allowing for instant database "wipes" simply by bumping the version number.
 
 Prompt Guardrails:
 Negative Constraints: Explicitly forbidding LLMs from making common mistakes (e.g., "BEHAUPTE NIEMALS, dass 'glauben' den Akkusativ verlangt!").
 
-Ambiguity Flags: Warning the AI about overlapping word states in German (e.g., explicitly flagging that uns/euch can be Dativ OR Akkusativ, forcing the AI to evaluate the verb context).
+Ambiguity Flags: Warning the AI about overlapping word states in German.
+
+Anti-Overstemming: Forcing the LLM to recognize compound adverbs (e.g., deinetwegen) as base dictionary words rather than stripping them down to incorrect root pronouns.

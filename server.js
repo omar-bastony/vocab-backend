@@ -500,7 +500,7 @@ app.post('/api/translate-sentence', async(req, res) => {
     }
 
     const normalizedBase = normalizeForCache(sentence);
-    const cacheKey = `matrix:v12:${normalizedBase}`;
+    const cacheKey = `matrix:v11:${normalizedBase}`;
 
     // Helper Function: Extracts ONLY the requested languages from the Master Dictionary
     const filterRequestedLanguages = (allTranslations) => {
