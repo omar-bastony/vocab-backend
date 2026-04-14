@@ -56,6 +56,17 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
         }
     }
 }
+
+// =======================================================================
+// 🧹 CACHE NORMALIZATION UTILITY
+// =======================================================================
+function normalizeForCache(text) {
+    return text
+        .toLowerCase()
+        .replace(/[.,!?¿¡"']/g, '') // Strip all common punctuation
+        .replace(/\s+/g, ' ')       // Collapse multiple spaces into one
+        .trim();
+}
  
 
 // =======================================================================
@@ -253,12 +264,10 @@ app.post('/api/analyze-sentence', async(req, res) => {
         });
 
     const cleanSentence = sentence.trim();
-    if (cleanSentence.length > 200)
-        return res.status(400).json({
-            error: "Sentence too long."
-        });
+    if (cleanSentence.length > 200) return res.status(400).json({ error: "Sentence too long." });
 
-    const cacheKey = `sentence:v8:${cleanSentence.toLowerCase()}`;
+    const normalizedBase = normalizeForCache(sentence);
+    const cacheKey = `sentence:v12:${normalizedBase}`;
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
@@ -490,12 +499,8 @@ app.post('/api/translate-sentence', async(req, res) => {
         return res.status(400).json({ error: "Missing sentence or target languages" });
     }
 
-    const cleanSentence = sentence.toLowerCase().trim();
-    
-    // 📍 1. SIMPLIFIED CACHE KEY
-    // We no longer append the languages to the key. This key now holds the Master Dictionary!
-    // Bumped to v11 to avoid clashing with the old cache structure.
-    const cacheKey = `matrix:v11:${cleanSentence}`;
+    const normalizedBase = normalizeForCache(sentence);
+    const cacheKey = `matrix:v12:${normalizedBase}`;
 
     // Helper Function: Extracts ONLY the requested languages from the Master Dictionary
     const filterRequestedLanguages = (allTranslations) => {
@@ -583,30 +588,38 @@ app.post('/api/translate-sentence', async(req, res) => {
     }
 });
 
+
 // =======================================================================
 // 7. FAST GRAMMAR CORRECTION (Powered by Gemini 2.5 Flash-Lite)
 // =======================================================================
 app.post('/api/fast-correct', async(req, res) => {
     const { sentence } = req.body;
     if (!sentence)
-        return res.status(400).json({
-            error: "Sentence required"
-        });
+        return res.status(400).json({ error: "Sentence required" });
 
-	// 1. Generate the unique key for this sentence
-    const cacheKey = `fastcorrect:v1:${sentence.toLowerCase().trim()}`;
+    const originalClean = sentence.trim();
+    
+    // 📍 1. Normalize the sentence to create a bulletproof Cache Key
+    const normalizedBase = normalizeForCache(sentence);
+    // Bumped to v2 to start fresh with the new normalization standard
+    const cacheKey = `fastcorrect:v2:${normalizedBase}`;
 
     try {
-        // 2. DATABASE FIRST: Check Upstash Redis
+        // 📍 2. DATABASE FIRST: Check Upstash Redis
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
             console.log("⚡ Served Grammar Correction from Cache!");
-            return res.json(cachedData); // Bypasses the rest of the code!
+            
+            // DYNAMIC CHECK: Even though it's cached, we must compare the CURRENT user's
+            // exact input against the perfectly cached sentence to see if THEY made a mistake.
+            cachedData.wasCorrected = (originalClean !== cachedData.correctedSentence);
+            
+            return res.json(cachedData); 
         }
     } catch (cacheErr) {
         console.error("Redis Cache Read Error:", cacheErr);
     }
-	
+    
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
@@ -614,33 +627,30 @@ app.post('/api/fast-correct', async(req, res) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-				
-				
                 system_instruction: {
                     parts: [{ 
                         text: `Du bist ein strenger, hochpräziser Deutschlehrer.
-						Prüfe den Text GANZ GENAU. Achte auch auf den Kontext über mehrere Sätze hinweg!
-						WICHTIG: Behalte die ursprüngliche Satzstruktur bei (wechsle niemals von Passiv zu Aktiv), sondern korrigiere NUR die Grammatikfehler!
+                        Prüfe den Text GANZ GENAU. Achte auch auf den Kontext über mehrere Sätze hinweg!
+                        WICHTIG: Behalte die ursprüngliche Satzstruktur bei (wechsle niemals von Passiv zu Aktiv), sondern korrigiere NUR die Grammatikfehler!
 
-						WICHTIGE KASUS- UND GRAMMATIK-REGELN:
-						1. 'glauben' (OHNE 'an') verlangt IMMER Dativ!
-						2. 'glauben an' verlangt IMMER Akkusativ!
-						3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ. (Achtung beim Passiv: Es MUSS heißen: "Mir wird geholfen").
-						4. PRONOMEN-KONGRUENZ: Ein Pronomen MUSS das grammatikalische Geschlecht seines Bezugsworts übernehmen! ("das Mädchen" -> "es").
-						5. KONJUNKTIV II: Wenn der Hauptsatz im Konjunktiv II steht, MUSS der 'Wenn'-Nebensatz auch im Konjunktiv II stehen ("Wenn ich Zeit HÄTTE").
-						6. PRONOMINALADVERBIEN: 'wegen' + Personalpronomen ist streng verboten! (Falsch: "wegen dir", Richtig: "deinetwegen". Falsch: "wegen mir", Richtig: "meinetwegen").
+                        WICHTIGE KASUS- UND GRAMMATIK-REGELN:
+                        1. 'glauben' (OHNE 'an') verlangt IMMER Dativ!
+                        2. 'glauben an' verlangt IMMER Akkusativ!
+                        3. 'helfen', 'danken', 'gefallen', 'antworten', 'gehören' verlangen IMMER Dativ. (Achtung beim Passiv: Es MUSS heißen: "Mir wird geholfen").
+                        4. PRONOMEN-KONGRUENZ: Ein Pronomen MUSS das grammatikalische Geschlecht seines Bezugsworts übernehmen! ("das Mädchen" -> "es").
+                        5. KONJUNKTIV II: Wenn der Hauptsatz im Konjunktiv II steht, MUSS der 'Wenn'-Nebensatz auch im Konjunktiv II stehen ("Wenn ich Zeit HÄTTE").
+                        6. PRONOMINALADVERBIEN: 'wegen' + Personalpronomen ist streng verboten!
+                        7. ORTHOGRAFIE: Achte strikt auf Groß-/Kleinschreibung und Satzzeichen (z.B. fehlender Punkt am Ende).
 
-						Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
-						{
-						  "originalSentence": "Der Text vom Benutzer",
-						  "wasCorrected": true oder false,
-						  "correctedSentence": "Der perfekte Satz.",
-						  "grammarExplanation": "Erkläre den Fehler präzise."
-						}` 
+                        Gib STRIKT ein JSON-Objekt mit genau dieser Struktur zurück:
+                        {
+                          "originalSentence": "Der Text vom Benutzer",
+                          "wasCorrected": true oder false,
+                          "correctedSentence": "Der perfekte Satz.",
+                          "grammarExplanation": "Erkläre den Fehler präzise."
+                        }` 
                     }]
                 },
-				
-				
                 contents: [{
                     role: "user",
                     parts: [{ text: `Prüfe diesen Text: "${sentence}"` }]
@@ -652,10 +662,11 @@ app.post('/api/fast-correct', async(req, res) => {
             })
         }, 3);
 
-
         const data = await response.json();
-        // Gemini wraps the string response in the text property, we parse it into a real JSON object
         const parsedData = JSON.parse(data.candidates[0].content.parts[0].text);
+
+        // 🛡️ THE OVERRIDE: Never trust the AI's boolean!
+        parsedData.wasCorrected = (originalClean !== parsedData.correctedSentence.trim());
 
         try {
             await redis.set(cacheKey, parsedData);
@@ -666,9 +677,7 @@ app.post('/api/fast-correct', async(req, res) => {
         res.json(parsedData);
     } catch (err) {
         console.error("Flash-Lite Correction Error:", err);
-        res.status(500).json({
-            error: "Correction failed."
-        });
+        res.status(500).json({ error: "Correction failed." });
     }
 });
 
