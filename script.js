@@ -477,12 +477,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- Translation Logic (Merged Sentence & Word Modes) ---
   translateBtn.addEventListener("click", async () => {
-    const text = germanInput.value.trim();
+	
+	const rawText = germanInput.value.trim();
     const selectedLangs = getSelectedLanguages();
-    if (!text || selectedLangs.length === 0) return;
+    if (!rawText || selectedLangs.length === 0) return;
 
-    // AUTO-DETECT: Sentence vs Single Word
-    const wordCount = text.split(/\s+/).length;
+    // --- SMART AUTO-DETECT: Sentence vs Single Word ---
+    const wordsArray = rawText.split(/\s+/);
+    
+    // Comprehensive list of German articles to ignore for word mode
+    const articles = [
+      "der", "die", "das", "den", "dem", "des",
+      "ein", "eine", "einer", "eines", "einem", "einen",
+      "kein", "keine", "keiner", "keines", "keinem", "keinen"
+    ];
+
+    let currentMode = "sentence";
+    let searchQuery = rawText; // The clean string we will actually send to the API
+
+    if (wordsArray.length === 1) {
+      currentMode = "word";
+    } else if (wordsArray.length === 2) {
+      const firstWord = wordsArray[0].toLowerCase();
+      const secondWord = wordsArray[1].toLowerCase();
+
+      if (articles.includes(firstWord)) {
+        // e.g., "das Kind" -> Word Mode, search only "Kind"
+        currentMode = "word";
+        searchQuery = wordsArray[1];
+      } else if (firstWord === "sich") {
+        // e.g., "sich freuen" -> Word Mode, search only "freuen"
+        currentMode = "word";
+        searchQuery = wordsArray[1];
+      } else if (secondWord === "sich") {
+        // e.g., "freuen sich" -> Word Mode, search only "freuen"
+        currentMode = "word";
+        searchQuery = wordsArray[0];
+      }
+    }
 
     // Global UI Resets
     translateBtn.disabled = true;
@@ -506,7 +538,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 📍 NEW: Reset the mode state on every new search
     document.body.classList.remove("sentence-mode");
 
-    if (wordCount > 1) {
+    if (currentMode === "sentence") {
       // ==========================================
       // 🧠 PROGRESSIVE SENTENCE ANALYSIS MODE
       // ==========================================
@@ -537,7 +569,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const openAiRes = await fetch(`${BACKEND_URL}/api/fast-correct`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sentence: text }),
+          body: JSON.stringify({ sentence: searchQuery }),
         });
 
         if (!openAiRes.ok) throw new Error("Grammar correction failed");
@@ -687,7 +719,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const textRes = await fetch(`${BACKEND_URL}/api/translate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ word: text }),
+          body: JSON.stringify({ word: searchQuery }),
         });
 
         if (!textRes.ok) throw new Error("Translation request failed");
