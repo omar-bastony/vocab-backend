@@ -10,6 +10,14 @@ const dailyTips = [
   "Adjektive stehen vor dem Nomen und passen sich an (ein <b>großer</b> Hund).",
   "Zusammengesetzte Nomen haben den Artikel des letzten Wortes (das Haus + die Tür = <b>die Haustür</b>).",
   "Der Plural von Nomen ist oft unregelmäßig. Lerne ihn direkt mit! (der Apfel -> die <b>Äpfel</b>)",
+  "Bei trennbaren Verben rutscht das Präfix ans Ende des Hauptsatzes: 'Ich <b>steige</b> in den Zug <b>ein</b>.'",
+  "Zeitangaben stehen im Satz meistens vor Ortsangaben (Time before Place). Bsp: Ich fahre <b>heute</b> (Zeit) in die <b>Stadt</b> (Ort).",
+  "Modalverben (können, müssen, wollen) stehen auf Position 2, das Hauptverb steht im Infinitiv <b>ganz am Ende</b>.",
+  "Viele englische Technik-Wörter sind feminin oder neutral: <b>die</b> App, <b>die</b> E-Mail, <b>das</b> Update, <b>das</b> Backup.",
+  "Werkzeuge enden oft auf '-er' und sind maskulin: <b>der</b> Hammer, <b>der</b> Schraubenzieher, <b>der</b> Bohrer.",
+  "Wechselpräpositionen wie 'in' oder 'auf' nutzen den <b>Akkusativ</b> bei Bewegung (Wohin?) und den <b>Dativ</b> bei Stillstand (Wo?).",
+  "Nach den Konjunktionen 'und', 'oder', 'aber' bleibt die Wortstellung gleich. Sie zählen als Position 0 im Satz.",
+  "Männliche Berufe enden meistens auf '-er' (der Lehr<b>er</b>), weibliche auf '-in' (die Lehrer<b>in</b>)."
 ];
 
 const materialData = {
@@ -126,6 +134,78 @@ const materialData = {
           "Licht (-er)",
         ],
       },
+	  {
+        name: "Technik & IT",
+        der: [
+          "Computer (-)",
+          "Bildschirm (-e)",
+          "Drucker (-)",
+          "Code (-s)",
+          "Fehler (-)"
+        ],
+        die: [
+          "Tastatur (-en)",
+          "Maus (¨-e)",
+          "Festplatte (-n)",
+          "Datei (-en)",
+          "Software (-s)"
+        ],
+        das: [
+          "Internet (-)",
+          "Handy (-s)",
+          "Kabel (-)",
+          "Programm (-e)",
+          "Update (-s)"
+        ],
+      },
+      {
+        name: "Verkehr & Reise",
+        der: [
+          "Zug (¨-e)",
+          "Bahnhof (¨-e)",
+          "Fahrplan (¨-e)",
+          "Waggon (-s)",
+          "Sitzplatz (¨-e)"
+        ],
+        die: [
+          "Fahrkarte (-n)",
+          "Verspätung (-en)",
+          "Haltestelle (-n)",
+          "Tür (-en)",
+          "Verbindung (-en)"
+        ],
+        das: [
+          "Gleis (-e)",
+          "Ticket (-s)",
+          "Fahrrad (¨-er)",
+          "Gepäck (-)",
+          "Abonnement (-s)"
+        ],
+      },
+      {
+        name: "Handwerk & Bauen",
+        der: [
+          "Hammer (-)",
+          "Nagel (¨-)",
+          "Schaum (¨-e)",
+          "Keil (-e)",
+          "Schraubenzieher (-)"
+        ],
+        die: [
+          "Schraube (-n)",
+          "Zange (-n)",
+          "Maschine (-n)",
+          "Farbe (-n)",
+          "Wand (¨-e)"
+        ],
+        das: [
+          "Werkzeug (-e)",
+          "Material (-ien)",
+          "Holz (¨-er)",
+          "Brett (-er)",
+          "Maßband (¨-er)"
+        ],
+      }
     ],
   },
   adjektive: {
@@ -212,6 +292,26 @@ const materialData = {
           "Bsp: Ich bringe einen Kuchen mit.<br>Konj: bringe mit, bringst mit, bringt mit...",
         imp: "bring mit / bringen Sie mit",
       },
+	  {
+        inf: "installieren",
+        notes: "Bsp: Ich installiere die neue Software.<br>Konj: installiere, installierst, installiert...",
+        imp: "installier(e) / installieren Sie",
+      },
+      {
+        inf: "herunterladen",
+        notes: "Bsp: Er lädt das Spiel herunter.<br>Konj: lade herunter, lädst herunter, lädt herunter...",
+        imp: "lade herunter / laden Sie herunter",
+      },
+      {
+        inf: "reparieren",
+        notes: "Bsp: Ich muss den alten Computer reparieren.<br>Konj: repariere, reparierst, repariert...",
+        imp: "reparier(e) / reparieren Sie",
+      },
+      {
+        inf: "umsteigen",
+        notes: "Bsp: Wir müssen am nächsten Bahnhof umsteigen.<br>Konj: steige um, steigst um, steigt um...",
+        imp: "steig um / steigen Sie um",
+      }
     ],
   },
   lesetexte: [
