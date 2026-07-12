@@ -602,7 +602,7 @@ app.post('/api/fast-correct', async(req, res) => {
     // 📍 1. Normalize the sentence to create a bulletproof Cache Key
     const normalizedBase = normalizeForCache(sentence);
     // Bumped to v2 to start fresh with the new normalization standard
-    const cacheKey = `fastcorrect:v3:${normalizedBase}`;
+    const cacheKey = `fastcorrect:v4:${normalizedBase}`;
 
     try {
         // 📍 2. DATABASE FIRST: Check Upstash Redis
@@ -612,7 +612,10 @@ app.post('/api/fast-correct', async(req, res) => {
             
             // DYNAMIC CHECK: Even though it's cached, we must compare the CURRENT user's
             // exact input against the perfectly cached sentence to see if THEY made a mistake.
-            cachedData.wasCorrected = (originalClean !== cachedData.correctedSentence);
+            // NEW: Ignore trailing punctuation for this check!
+            const userCheck = originalClean.replace(/[.?!]+$/, '').trim();
+            const cacheCheck = cachedData.correctedSentence.replace(/[.?!]+$/, '').trim();
+            cachedData.wasCorrected = (userCheck !== cacheCheck);
             
             return res.json(cachedData); 
         }
@@ -666,7 +669,11 @@ app.post('/api/fast-correct', async(req, res) => {
         const parsedData = JSON.parse(data.candidates[0].content.parts[0].text);
 
         // 🛡️ THE OVERRIDE: Never trust the AI's boolean!
-        parsedData.wasCorrected = (originalClean !== parsedData.correctedSentence.trim());
+        // NEW: Ignore trailing punctuation when deciding if a REAL mistake happened
+        const cleanOriginal = originalClean.replace(/[.?!]+$/, '').trim();
+        const cleanCorrected = parsedData.correctedSentence.replace(/[.?!]+$/, '').trim();
+        
+        parsedData.wasCorrected = (cleanOriginal !== cleanCorrected);
 
         try {
             await redis.set(cacheKey, parsedData);
