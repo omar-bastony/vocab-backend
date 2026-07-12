@@ -591,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Lock in the grammatically perfect sentence
         const finalSentence = grammarData.wasCorrected
           ? grammarData.correctedSentence
-          : text;
+          : searchQuery;
 
         // 📍 PHASE 2: FLAWLESS TRANSLATION
         // Now we fire off the translation using ONLY the perfect sentence.
