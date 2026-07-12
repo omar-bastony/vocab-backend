@@ -93,45 +93,99 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // --- Language Checkboxes Setup (With LocalStorage) ---
+// --- Centralized Language Setup (Onboarding Welcome Pop-up Integrated) ---
   const defaultLanguages = [
     { name: "English", checked: true },
     { name: "Arabic", checked: true },
-    { name: "Russian", checked: true },
-    { name: "Dari", checked: true },
-    { name: "Farsi", checked: true },
-    { name: "Amharic", checked: true },
-    { name: "Tigrinya", checked: true },
+    { name: "Russian", checked: false },
+    { name: "Dari", checked: false },
+    { name: "Farsi", checked: false },
+    { name: "Amharic", checked: false },
+    { name: "Tigrinya", checked: false },
     { name: "Spanish", checked: false },
     { name: "French", checked: false },
     { name: "Turkish", checked: false },
-    { name: "Ukrainian", checked: true },
+    { name: "Ukrainian", checked: false },
     { name: "Somali", checked: false },
     { name: "Armenian", checked: false },
   ];
 
-  // Load saved languages from local storage (if any)
+  const welcomeLangModal = document.getElementById("welcomeLangModal");
+  const welcomeLangGrid = document.getElementById("welcomeLangGrid");
+  const saveWelcomeLangsBtn = document.getElementById("saveWelcomeLangsBtn");
+  
+  // A clean indicator to detect if a visitor has ever configured their profile
   const savedLangs = JSON.parse(localStorage.getItem("savedLanguages"));
+  const isFirstTimeVisitor = !savedLangs;
 
-  defaultLanguages.forEach((lang) => {
-    // If we have saved preferences, use them. Otherwise, use the defaults.
-    const isChecked = savedLangs
-      ? savedLangs.includes(lang.name)
-      : lang.checked;
+  /**
+   * Universal rendering utility to build configuration grids
+   */
+  function buildLanguageGrid(targetContainer, activePreferences, isPopUpContext = false) {
+    targetContainer.innerHTML = "";
+    
+    defaultLanguages.forEach((lang) => {
+      const isChecked = activePreferences ? activePreferences.includes(lang.name) : lang.checked;
 
-    const label = document.createElement("label");
-    label.className = "checkbox-label";
-    label.innerHTML = `<input type="checkbox" value="${lang.name}" ${isChecked ? "checked" : ""}> ${lang.name}`;
+      const label = document.createElement("label");
+      label.className = "checkbox-label";
+      
+      const uniqueIdPrefix = isPopUpContext ? "popup-" : "drawer-";
+      label.innerHTML = `
+        <input type="checkbox" id="${uniqueIdPrefix}${lang.name}" value="${lang.name}" ${isChecked ? "checked" : ""}> 
+        ${lang.name}
+      `;
 
-    // Add event listener to save choices whenever a box is checked/unchecked
-    const checkbox = label.querySelector("input");
-    checkbox.addEventListener("change", () => {
-      const selected = getSelectedLanguages();
-      localStorage.setItem("savedLanguages", JSON.stringify(selected));
+      // Live-save event tracking restricted strictly to the persistent navigation drawer
+      if (!isPopUpContext) {
+        const checkbox = label.querySelector("input");
+        checkbox.addEventListener("change", () => {
+          const selected = getSelectedLanguages();
+          localStorage.setItem("savedLanguages", JSON.stringify(selected));
+        });
+      }
+
+      targetContainer.appendChild(label);
     });
+  }
 
-    langCheckboxes.appendChild(label);
-  });
+  // Phase 1: Initialize the primary navigation drawer interface state immediately
+  buildLanguageGrid(langCheckboxes, savedLangs, false);
+
+  // Phase 2: Orchestrate the First-Time Onboarding Experience if applicable
+  if (isFirstTimeVisitor && welcomeLangModal && welcomeLangGrid) {
+    // Generate the checkboxes for the modal using application system defaults
+    buildLanguageGrid(welcomeLangGrid, null, true);
+
+    // Trigger your application's standardized smooth Material modal appearance transitions
+    welcomeLangModal.classList.remove("hidden");
+    setTimeout(() => welcomeLangModal.classList.add("active"), 10);
+
+    // Submission logic processing
+    saveWelcomeLangsBtn.addEventListener("click", () => {
+      const selectedChoices = Array.from(welcomeLangGrid.querySelectorAll("input:checked")).map(
+        (cb) => cb.value
+      );
+
+      // Guardrail protection ensuring the platform contains at least one output column
+      if (selectedChoices.length === 0) {
+        alert("Bitte wähle mindestens eine Sprache aus, um fortzufahren!");
+        return;
+      }
+
+      // Persist configuration choices across future client instances
+      localStorage.setItem("savedLanguages", JSON.stringify(selectedChoices));
+
+      // Re-initialize the background navigation drawer to precisely align configurations
+      buildLanguageGrid(langCheckboxes, selectedChoices, false);
+
+      // Execute a smooth, unified exit sequence matching the design layout guidelines
+      welcomeLangModal.classList.remove("active");
+      setTimeout(() => {
+        welcomeLangModal.classList.add("hidden");
+      }, 300);
+    });
+  }
 
   // --- Dropdowns Logic ---
   function closeAllDropdowns() {

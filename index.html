@@ -163,6 +163,29 @@
 
     </div>
   </div>
+  
+	  <!-- Onboarding / Welcome Language Selection Modal -->
+	<div id="welcomeLangModal" class="modal-overlay hidden">
+	  <div class="modal-content" style="max-width: 480px;">
+		<h2 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+		  Willkommen bei FlüentDE! ✨
+		</h2>
+		<p class="modal-body" style="color: var(--md-sys-color-outline); margin-bottom: 1.5rem;">
+		  Wähle die Sprachen aus, in die du deutsche Wörter und Sätze übersetzen möchtest. Du kannst deine Auswahl später jederzeit im Menü ändern.
+		</p>
+		
+		<!-- Onboarding Checkbox Selection Grid -->
+		<div id="welcomeLangGrid" class="lang-checkbox-grid" style="margin: 1.5rem 0; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+		  <!-- Dynamically populated via JS -->
+		</div>
+		
+		<div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem;">
+		  <button id="saveWelcomeLangsBtn" class="m3-button" style="width: 100%;">
+			Speichern & Starten
+		  </button>
+		</div>
+	  </div>
+	</div>
 
   <script src="data.js"></script>
   <script src="script.js?v=1.1"></script>
