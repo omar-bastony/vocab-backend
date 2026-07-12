@@ -113,7 +113,7 @@ app.post('/api/spellcheck', async(req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: "openai/gpt-oss-120b",
                 messages: [{
                         role: "user",
                         content: promptText
@@ -179,7 +179,7 @@ app.post('/api/translate', async(req, res) => {
         'Somali', 'Armenian'
     ];
 
-    const cacheKey = `word:v4:${cleanWord.toLowerCase()}`;
+    const cacheKey = `word:v5:${cleanWord.toLowerCase()}`;
 
     try {
         const cachedData = await redis.get(cacheKey);
@@ -222,7 +222,7 @@ app.post('/api/translate', async(req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: "openai/gpt-oss-120b",
                 messages: [{
                         role: "user",
                         content: promptText
@@ -267,7 +267,7 @@ app.post('/api/analyze-sentence', async(req, res) => {
     if (cleanSentence.length > 200) return res.status(400).json({ error: "Sentence too long." });
 
     const normalizedBase = normalizeForCache(sentence);
-    const cacheKey = `sentence:v12:${normalizedBase}`;
+    const cacheKey = `sentence:v13:${normalizedBase}`;
     try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
@@ -319,7 +319,7 @@ app.post('/api/analyze-sentence', async(req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile", // or whichever model you are using
+                model: "openai/gpt-oss-120b", // or whichever model you are using
                 messages: [{ role: "user", content: promptText }],
                 response_format: { type: "json_object" },
                 temperature: 0.1
@@ -394,7 +394,7 @@ app.get('/api/generate-reading', async(req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: "openai/gpt-oss-120b",
                 messages: [{
                         role: "system",
                         content: "Du bist ein extrem kreativer Deutschlehrer. Output ONLY valid JSON. Generiere niemals dieselbe Geschichte zweimal."
@@ -602,7 +602,7 @@ app.post('/api/fast-correct', async(req, res) => {
     // 📍 1. Normalize the sentence to create a bulletproof Cache Key
     const normalizedBase = normalizeForCache(sentence);
     // Bumped to v2 to start fresh with the new normalization standard
-    const cacheKey = `fastcorrect:v2:${normalizedBase}`;
+    const cacheKey = `fastcorrect:v3:${normalizedBase}`;
 
     try {
         // 📍 2. DATABASE FIRST: Check Upstash Redis
@@ -621,7 +621,7 @@ app.post('/api/fast-correct', async(req, res) => {
     }
     
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const url = `const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`;`;
 
         const response = await fetchWithRetry(url, {
             method: 'POST',
