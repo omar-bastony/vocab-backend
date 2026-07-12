@@ -229,14 +229,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Grammar Clicks
-  document
+	document
     .querySelectorAll(".grammar-item:not(.material-btn)")
     .forEach((item) => {
       item.addEventListener("click", (e) => {
         const topicKey = e.target.getAttribute("data-topic");
-        const content = grammarContent[topicKey]; // Uses data.js implicitly if integrated
+        const content = grammarContent[topicKey]; 
         if (content) openModal(content.title, content.body, false);
+        
         closeAllDropdowns();
+        toggleDrawer(true); // 📍 NEW: Force close the side menu
       });
     });
 
@@ -245,6 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
     item.addEventListener("click", (e) => {
       const type = e.target.getAttribute("data-type");
       closeAllDropdowns();
+	  toggleDrawer(true);
 
       if (type === "lesetexte") {
         renderReadingPassages();
