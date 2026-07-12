@@ -314,28 +314,28 @@ const materialData = {
       }
     ],
   },
-  lesetexte: [
-    {
-      title: "Text 1: Hallo! Ich bin Anna",
-      fokus: "Fokus: Begrüßung, sich vorstellen, Zahlen, Hobbys",
-      text: "Hallo! Ich bin Anna und ich bin 25 Jahre alt. Ich komme aus Österreich, aber ich wohne jetzt in Berlin. Berlin ist eine große und schöne Stadt. Ich lerne Deutsch, weil ich hier arbeiten möchte. Meine Hobbys sind Lesen und Schwimmen. Am Wochenende fahre ich oft mit dem Fahrrad. Ich habe einen Bruder. Er heißt Lukas und ist 22 Jahre alt.",
-    },
-    {
-      title: "Text 2: Im Supermarkt",
-      fokus: "Fokus: Einkaufen, Essen, Fragen stellen",
-      text: "Heute ist Samstag. Ich gehe in den Supermarkt, denn mein Kühlschrank ist leer. Zuerst brauche ich Obst. Ich kaufe fünf Äpfel und drei Bananen. Dann gehe ich zur Bäckerei und kaufe ein frisches Brot. Ich suche die Milch, aber ich finde sie nicht. Ich frage eine Verkäuferin: „Entschuldigung, wo ist die Milch?“ Sie antwortet: „Die Milch ist im Gang vier, links.“ Ich bedanke mich und bezahle an der Kasse.",
-    },
-    {
-      title: "Text 3: Ein Ausflug nach München",
-      fokus: "Fokus: Präteritum (war, hatte), Perfekt",
-      text: "Letztes Wochenende war ich in München. Das Wetter war sehr schön – die Sonne hat geschienen und es war warm. Ich bin mit dem Zug gefahren. Die Fahrt hat zwei Stunden gedauert. In München habe ich meine Freundin Sarah besucht. Wir haben zusammen das Zentrum gesehen und einen Kaffee getrunken. Am Abend haben wir in einem Restaurant typisch bayerisch gegessen. Es war sehr lecker!",
-    },
-    {
-      title: "Text 4: Der Alltag im Büro",
-      fokus: "Fokus: Büro, Zeit, Modalverben (können, müssen, wollen)",
-      text: "Guten Morgen! Mein Name ist Herr Schmidt. Ich arbeite in einem Büro in Berlin. Mein Tag beginnt immer früh. Ich stehe um sechs Uhr auf, dusche kalt und trinke einen starken Kaffee. Ich fahre jeden Tag mit dem Fahrrad zur Arbeit. Zuerst schalte ich meinen Computer an und lese meine E-Mails. Heute habe ich sehr viel Arbeit. Ich muss zwei Berichte schreiben und drei Kunden anrufen. Um zwölf Uhr mache ich eine Pause.",
-    },
-  ],
+	lesetexte: [
+		{
+		  title: "Text 1: Mit dem Zug an die Küste",
+		  fokus: "Fokus: Verkehrsmittel, Trennbare Verben, Dativ",
+		  text: "Heute fahre ich mit dem Zug von Schwerin nach Wismar. Ich habe ein Deutschland-Ticket auf meinem Handy. Das ist sehr praktisch. Ich nehme auch mein Fahrrad mit, denn ich möchte später an der Küste fahren. Der Zug fährt pünktlich von Gleis 3 ab. Die Fahrt dauert etwa eine halbe Stunde. Im Zug lese ich ein Buch. In Wismar steige ich aus und fahre sofort mit dem Fahrrad los.",
+		},
+		{
+		  title: "Text 2: Das Retro-Spiel",
+		  fokus: "Fokus: Perfekt, Technologie, Hobbys",
+		  text: "Gestern Abend hatte ich Zeit für mein Hobby. Ich mag alte Computerspiele aus den 90er Jahren sehr. Ich habe meinen Computer eingeschaltet und ein altes Strategiespiel installiert. Zuerst gab es einen Fehler, aber ich habe das Problem schnell gelöst. Danach habe ich drei Stunden lang gespielt. Die Grafik war alt, aber das Spiel hat viel Spaß gemacht. Später bin ich müde ins Bett gegangen.",
+		},
+		{
+		  title: "Text 3: Rabatt im Online-Shop",
+		  fokus: "Fokus: Arbeit, Zahlen, Akkusativ",
+		  text: "Ich habe einen eigenen Online-Shop im Internet. Heute plane ich eine besondere Aktion für meine Kunden. Ich mache einen Rabatt von 20 Prozent für das ganze Wochenende. Ich schreibe einen kurzen Code, ändere den Preis im System und erstelle ein neues Banner für die Webseite. Wenn die Kunden jetzt etwas kaufen, sehen sie sofort den günstigeren Preis. Ich hoffe, dass viele Leute die Aktion nutzen.",
+		},
+		{
+		  title: "Text 4: Im Baumarkt",
+		  fokus: "Fokus: Einkaufen, Fragen, Handwerk",
+		  text: "Ich repariere heute eine Tür zu Hause. Dafür brauche ich Material. Ich fahre zum Baumarkt. Der Markt ist sehr groß und ich finde die Produkte nicht sofort. Ich suche Bauschaum und Holzkeile. Ich frage einen Mitarbeiter: „Entschuldigung, wo finde ich Material für Holztüren?“ Er zeigt mir das richtige Regal. Ich lege die Sachen in meinen Einkaufswagen und bezahle an der Kasse.",
+		}
+	  ],
 };
 
 // ==========================================
